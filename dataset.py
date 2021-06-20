@@ -35,6 +35,7 @@ class wynk_sessions_dataset():
         
         if os.path.exists(SONG2INFO_PICKLE_PATH):
             print('\nLoading song2info dict...')
+            
             infile = open(SONG2INFO_PICKLE_PATH,'rb')
             self.song2info = pickle.load(infile)
             infile.close()
@@ -65,38 +66,68 @@ class wynk_sessions_dataset():
         '''
         Songs with higher frequencies have lower embedding ids
         '''
-        # Read song_info file as a pandas dataframe
-        song_info_df = pd.read_parquet(self.train_songs_info_path, columns=["song_id", "song_embedding_id", "frequency"])
+        if os.path.exists(BUILD_VOCAB_DICT_PATH):
+            print('\nLoading build_vocab_dict...')
+            
+            infile = open(BUILD_VOCAB_DICT_PATH,'rb')
+            build_vocab_dict = pickle.load(infile)
+            infile.close()
 
-        print('song_info_df.shape: ', song_info_df.shape) # (149_345, 2)
-        print('song_info_df.columns: ', song_info_df.columns) # song_id, frequency
+            self.popular_songs_num = build_vocab_dict["self.popular_songs_num"]
+            self.popular_songs = build_vocab_dict["self.popular_songs"]
+            self.idx2item = build_vocab_dict["self.idx2item"]
+            self.idx2item = build_vocab_dict["self.idx2item"]
+            self.vocab_size = build_vocab_dict["self.vocab_size"]
+            
+        else:
+            print('\nMaking build_vocab_dict...')
+            
+            # Read song_info file as a pandas dataframe
+            song_info_df = pd.read_parquet(self.train_songs_info_path, columns=["song_id", "song_embedding_id", "frequency"])
 
-        # Sorting song_info_df by frequency values         
-        song_info_df = song_info_df.sort_values(by='frequency', ascending=False)
-        song_info_df = song_info_df.reset_index(drop=True)
-        
-        # Store list of popular song (top 5% songs sorted by frequency)
-        self.popular_songs_num = int(POPULAR_SONGS_PERCENTAGE*song_info_df.shape[0])
-        print('self.popular_songs_num: ', self.popular_songs_num)        
-        self.popular_songs = song_info_df.iloc[:self.popular_songs_num, :]['song_id'].to_list()
-        
-        # Make dictionaries
-        self.item2idx = {}    
-        self.item2idx[SONG_PAD_TOKEN] = SONG_PAD_INDEX
-        self.item2idx[SONG_UNK_TOKEN] = SONG_UNK_INDEX
-        for _, row in song_info_df.iterrows():
-            self.item2idx[row["song_id"]] = row["song_embedding_id"]        
+            print('song_info_df.shape: ', song_info_df.shape) # (149_345, 2)
+            print('song_info_df.columns: ', song_info_df.columns) # song_id, frequency
 
-        self.idx2item = {song_embedding_id:song_id for song_id, song_embedding_id in self.item2idx.items()}
-        
-        assert len(self.item2idx) == len(self.idx2item), "len(self.item2idx) != len(self.idx2item)"
-        
-        self.vocab_size = len(self.item2idx) # earlier self.NUM_ITEMS
-        print("self.vocab_size: ", self.vocab_size)
-        
+            # Sorting song_info_df by frequency values         
+            song_info_df = song_info_df.sort_values(by='frequency', ascending=False)
+            song_info_df = song_info_df.reset_index(drop=True)
+
+            # Store list of popular song (top 5% songs sorted by frequency)
+            self.popular_songs_num = int(POPULAR_SONGS_PERCENTAGE*song_info_df.shape[0])
+            print('self.popular_songs_num: ', self.popular_songs_num)        
+            self.popular_songs = song_info_df.iloc[:self.popular_songs_num, :]['song_id'].to_list()
+
+            # Make dictionaries
+            self.item2idx = {}    
+            self.item2idx[SONG_PAD_TOKEN] = SONG_PAD_INDEX
+            self.item2idx[SONG_UNK_TOKEN] = SONG_UNK_INDEX
+            for _, row in song_info_df.iterrows():
+                self.item2idx[row["song_id"]] = row["song_embedding_id"]        
+
+            self.idx2item = {song_embedding_id:song_id for song_id, song_embedding_id in self.item2idx.items()}
+
+            assert len(self.item2idx) == len(self.idx2item), "len(self.item2idx) != len(self.idx2item)"
+
+            self.vocab_size = len(self.item2idx) # earlier self.NUM_ITEMS
+            print("self.vocab_size: ", self.vocab_size)
+            
+            # Put all the variables into in dictionary
+            build_vocab_dict = {
+                "self.popular_songs_num": self.popular_songs_num,
+                "self.popular_songs": self.popular_songs,
+                "self.idx2item": self.idx2item,
+                "self.idx2item": self.idx2item,
+                "self.vocab_size": self.vocab_size
+                                }
+            
+            # Save the dictionary into a pickle file
+            outfile = open(BUILD_VOCAB_DICT_PATH, "wb")
+            pickle.dump(build_vocab_dict, outfile)
+            outfile.close() 
+            
         print('##### Vocab built... #####\n')
         
-        
+
 
 if __name__ == "__main__":
 
