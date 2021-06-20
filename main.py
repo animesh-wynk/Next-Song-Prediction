@@ -101,9 +101,10 @@ for e in range(START_EPOCH, EPOCHS):
     train_gen = tf.data.Dataset.from_generator(
                                 train_gen,
                                 output_types=(tf.dtypes.int64, tf.dtypes.int64),
-                                output_shapes=((BATCH_SIZE, MAX_LEN), (BATCH_SIZE,)),
-                                args=(e,)
+                                output_shapes=((BATCH_SIZE, MAX_LEN), (BATCH_SIZE,)) 
                                 )
+    
+    print("\nTRAINING")
     
     # Try prefetch!
     #train_gen = train_gen.prefetch(tf.data.AUTOTUNE)
@@ -111,12 +112,15 @@ for e in range(START_EPOCH, EPOCHS):
     
     # Make the tf data generator distributable
     train_dist_dataset = strategy.experimental_distribute_dataset(train_gen)
-    
+
     # Training
     total_loss = 0
     tick = time.time()
     for batch_idx, batch in enumerate(train_dist_dataset):        
         loss_value = distributed_train_step(batch)
+        
+        q('yahanpr!!!')
+        
         total_loss += loss_value
 #         print(f'--------------------  {batch_idx}  --------------------')
         

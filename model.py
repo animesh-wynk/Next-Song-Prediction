@@ -44,7 +44,6 @@ class rnn_reco_model(tf.keras.Model):
         self.emb   = tf.keras.layers.Embedding(vocab_size, song_emb_dim, mask_zero=True, name="embedding_layer")            
         
         self.lstm   = tf.keras.layers.LSTM(lstm_dim, return_state=True, name="rnn_layer")    
-
         self.dense = customLinear(in_units=lstm_dim, out_units=vocab_size)
         self.dense.build((lstm_dim, ))
           

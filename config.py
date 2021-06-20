@@ -53,6 +53,7 @@ if not os.path.exists(PICKLES_DIR_PATH):
     os.mkdir(PICKLES_DIR_PATH)
 
 SONG2INFO_PICKLE_PATH = os.path.join(PICKLES_DIR_PATH, 'song2info.pickle')
+BUILD_VOCAB_DICT_PATH = os.path.join(PICKLES_DIR_PATH, 'build_vocab.pickle')
 
 QUALITATIVE_TEST_DATA_PATH_ANIMESH  = QUALITATIVE_TEST_DATA_PATH + "song_info_dataset_for_qualitative_assessment_of_rnn_model.csv"
 QUALITATIVE_TEST_DATA_PATH_SANIDHYA = QUALITATIVE_TEST_DATA_PATH + "test_data_top_50_similar_songs_cleaned.csv"
@@ -128,7 +129,7 @@ EPOCHS = 10                                                             # number
 
 METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH = 75_000                  # metrics evaluation on the test-set and saving model's weights happens after every METRICS_EVALUATION_EVERY_N_BATCH batches
 SHOW_LOSS_EVERY_N_BATCH = 1000                                          # training loss is printed after every SHOW_LOSS_EVERY_N_BATCH batches
-WRITE_SUMMARY = True                                                    # whether to write summary on tensorboard or not 
+WRITE_SUMMARY = False                                                    # whether to write summary on tensorboard or not 
 
 NUM_TEST_SAMPLES_QUANTITATIVE = 10_000                                   # number of testing examples to be used for evaluating all the metrics 
 NUM_TEST_SAMPLES_QUALITATIVE = 10                                       # valid only when QUALITATIVE_RESULTS_ON_HANDPICKED_SONGS is False
