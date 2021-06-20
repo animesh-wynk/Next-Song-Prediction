@@ -16,7 +16,6 @@ class wynk_sessions_dataset():
         
         # Make song2info dictionary
         self._map_song2info()
-        q('acha hmmm')
         
     def preprocessed_data_generator(self, epoch):
         preprocess_training_data_path_list = sorted(os.listdir(PREPROCESSED_TRAINING_DATA_PATH))
@@ -49,7 +48,7 @@ class wynk_sessions_dataset():
             print("train_songs_info_df.shape: ", train_songs_info_df.shape) #(149345, 7)          
            
             # Make song2info dictionary                
-            self.item2idx = {row["song_id"]: f"TITLE: {row['title']} | ALBUM: {row['album']} | ARTIST: {row['artist']} | FREQUENCY: {row['frequency']} | LANG: {row['language']} | YEAR: {row['publishedYear']}" 
+            self.song2info = {row["song_id"]: f"TITLE: {row['title']} | ALBUM: {row['album']} | ARTIST: {row['artist']} | FREQUENCY: {row['frequency']} | LANG: {row['language']} | YEAR: {row['publishedYear']}" 
                              for _, row in train_songs_info_df.iterrows()}
         
             print("len(self.song2info): ", len(self.song2info))
