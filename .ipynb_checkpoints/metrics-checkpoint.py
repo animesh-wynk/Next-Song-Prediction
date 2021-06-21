@@ -138,6 +138,7 @@ def get_metrics(model, dataset):
     
     return sps, recall, item_coverage, popular_recommendations#, user_coverage
 
+
 def generate_qualitative_results_on_handpicked_songs(model, write_name, handpicked_songs_list, dataset):
     handpicked_songs_list = [[i] for i in handpicked_songs_list]
     
@@ -148,9 +149,10 @@ def generate_qualitative_results_on_handpicked_songs(model, write_name, handpick
         if len(seq_processed) > 0:
             handpicked_songs_list_processed.append(seq_processed)
 
-    print(f'\nGenerating Qualitative Results on Handpicked {len(handpicked_songs_list_processed)} Test Samples ...')
+    print(f"\nGenerating Qualitative Results on Handpicked {len(handpicked_songs_list_processed)} Test Samples ...")
     for inp in handpicked_songs_list_processed:
         visualize_recommendations(model, write_name, dataset, tf.constant([inp]), num_recommendation_timesteps=NUM_RECOMMENDATION_TIMESTEPS)
+        
         
 def compute_and_store_metrics(model, dataset, count_dict, best_metrics_dict, test_summary_writer):
     '''
@@ -160,31 +162,31 @@ def compute_and_store_metrics(model, dataset, count_dict, best_metrics_dict, tes
     # Quantitative results    
     sps, recall, item_coverage, popular_recommendations = get_metrics(model, dataset)
 
-    print(f'sps           : {round(sps, 2)}%')
-    print(f'recall        : {round(recall, 2)}%')
-    print(f'item_coverage : {item_coverage}')
-    print(f'popular_recommendations: {round(popular_recommendations, 2)}%\n')
+    print(f"sps           : {round(sps, 2)}%")
+    print(f"recall        : {round(recall, 2)}%")
+    print(f"item_coverage : {item_coverage}")
+    print(f"popular_recommendations: {round(popular_recommendations, 2)}%\n")
     # print(f'user_coverage : {round(user_coverage, 2)}%\n')
             
     if WRITE_SUMMARY:        
         with test_summary_writer.as_default():
-            tf.summary.scalar('recall'                 , recall       , step=count_dict['total_batches'])            
-            tf.summary.scalar('sps'                    , sps          , step=count_dict['total_batches'])            
-            tf.summary.scalar('item_coverage'          , item_coverage, step=count_dict['total_batches'])            
-            tf.summary.scalar('popular_recommendations', popular_recommendations, step=count_dict['total_batches'])
+            tf.summary.scalar("recall"                 , recall       , step=count_dict["total_batches"])            
+            tf.summary.scalar("sps"                    , sps          , step=count_dict["total_batches"])            
+            tf.summary.scalar("item_coverage"          , item_coverage, step=count_dict["total_batches"])            
+            tf.summary.scalar("popular_recommendations", popular_recommendations, step=count_dict["total_batches"])
             # tf.summary.scalar('user_coverage', user_coverage, step=count_dict['total_batches'])
 
     SAVE_MODEL = False
-    if sps > best_metrics_dict['best_sps']:
-        best_metrics_dict['best_sps'] = sps                
+    if sps > best_metrics_dict["best_sps"]:
+        best_metrics_dict["best_sps"] = sps                
         SAVE_MODEL = True
 
-    if recall > best_metrics_dict['best_recall']:
-        best_metrics_dict['best_recall'] = recall
+    if recall > best_metrics_dict["best_recall"]:
+        best_metrics_dict["best_recall"] = recall
         SAVE_MODEL = True
 
-    if item_coverage > best_metrics_dict['best_item_coverage']:
-        best_metrics_dict['best_item_coverage'] = item_coverage                    
+    if item_coverage > best_metrics_dict["best_item_coverage"]:
+        best_metrics_dict["best_item_coverage"] = item_coverage                    
         SAVE_MODEL = True    
     
     # Qualitative results
@@ -195,7 +197,7 @@ def compute_and_store_metrics(model, dataset, count_dict, best_metrics_dict, tes
         print("write_name: ", write_name)
         
         handpicked_songs_df = pd.read_csv(QUALITATIVE_TEST_DATA_PATH)
-        handpicked_songs_list = handpicked_songs_df['song_id'].unique().tolist()
+        handpicked_songs_list = handpicked_songs_df["song_id"].unique().tolist()
         
         generate_qualitative_results_on_handpicked_songs(model, write_name, handpicked_songs_list, dataset)            
     

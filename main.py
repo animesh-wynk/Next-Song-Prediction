@@ -1,6 +1,6 @@
 import os, shutil, pdb, time
 import tensorflow as tf
-print('tf.__version__: ', tf.__version__)
+print(f"tf.__version__: {tf.__version__}")
 
 from dataset import wynk_sessions_dataset
 from model import rnn_reco_model
@@ -8,7 +8,7 @@ from metrics import compute_and_store_metrics
 from config import *
 
 strategy = STRATEGY
-print ('Number of devices: {}'.format(strategy.num_replicas_in_sync))
+print(f"Number of devices: {strategy.num_replicas_in_sync}")
 
 ### Initialize dataset class object
 dataset = wynk_sessions_dataset(TRAIN_DATA_PATH, TRAIN_SONGS_INFO_PATH)
@@ -20,8 +20,8 @@ if WRITE_SUMMARY:
         shutil.rmtree(SUMMARY_DIR)
 
     # os.makedirs(SUMMARY_DIR)
-    train_summary_writer = tf.summary.create_file_writer(os.path.join(SUMMARY_DIR, 'train'))
-    test_summary_writer  = tf.summary.create_file_writer(os.path.join(SUMMARY_DIR, 'test'))
+    train_summary_writer = tf.summary.create_file_writer(os.path.join(SUMMARY_DIR, "train"))
+    test_summary_writer  = tf.summary.create_file_writer(os.path.join(SUMMARY_DIR, "test"))
     train_summary_counter = 0
 else:
     test_summary_writer = None
@@ -34,7 +34,7 @@ with strategy.scope():
         model.build(input_shape=(None, MAX_LEN))
         print(model.summary())
         model.load_weights(LOAD_MODEL_PATH)
-        print(f'model loaded: {LOAD_MODEL_PATH}')    
+        print(f"Model loaded: {LOAD_MODEL_PATH}")    
     
     optimizer = tf.keras.optimizers.Adam() 
 
@@ -52,7 +52,7 @@ with strategy.scope():
                             num_classes = dataset.vocab_size,
                             num_true = 1,
                             remove_accidental_hits=True,
-                            name = 'sampled_softmax_loss'
+                            name = "sampled_softmax_loss"
                         )        # (bs, ) # here reduction is None
         
         # per_example_loss seems to be arrays for loss per example, for all the replicas
@@ -82,20 +82,15 @@ def train_step(inputs):
 
     #train_accuracy.update_state(labels, predictions)
     return loss    
-    
+
+print("- - - TRAIN - - - ")  
 best_metrics_dict = {'best_sps': -1,
                 'best_recall': -1,
                 'best_item_coverage': -1}
-
-
-
-print('- - - EVALUATING METRICS  - - - ')
-
-
 batch_num = BATCH_NUM_START
 ### Training loop
 for e in range(START_EPOCH, END_EPOCH):
-    print(f'EPOCH: {str(e+1).zfill(len(str(END_EPOCH)))}/{END_EPOCH}')
+    print(f"EPOCH: {str(e+1).zfill(len(str(END_EPOCH)))}/{END_EPOCH}")
         
     # Initialize python data generator
     train_gen = dataset.preprocessed_data_generator
@@ -113,39 +108,35 @@ for e in range(START_EPOCH, END_EPOCH):
     # Make tf data generator distributable
     train_dist_dataset = strategy.experimental_distribute_dataset(train_gen)
 
-    print('- - - TRAIN - - - ')  
     total_loss = 0
     tick = time.time()
-    for batch_idx, batch in enumerate(train_dist_dataset):        
+    for batch_idx, batch in enumerate(train_dist_dataset):      
+        print(f">>>{str(batch_idx).zfill(6)}", end="\r")
         loss_value = distributed_train_step(batch)    
         total_loss += loss_value
         
         if WRITE_SUMMARY:
             with train_summary_writer.as_default():
-                tf.summary.scalar('train/sampled-softmax loss', loss_value.numpy(), step=train_summary_counter)                
+                tf.summary.scalar("train/sampled-softmax loss", loss_value.numpy(), step=train_summary_counter)       
                 train_summary_counter += 1
                 
         # Show loss
         if (batch_idx+1)%SHOW_LOSS_EVERY_N_BATCH==0:
-            print(f'loss at batch_idx: {str(batch_idx).zfill(8)} is {str(round(loss_value.numpy(), 5)).zfill(5)} at {str(round((SHOW_LOSS_EVERY_N_BATCH)/(time.time() - tick), 3)).zfill(3)} batches/sec' )                
+            print(f"loss at batch_idx: {str(batch_idx).zfill(8)} is {str(round(loss_value.numpy(), 5)).zfill(5)} at {str(round((SHOW_LOSS_EVERY_N_BATCH)/(time.time() - tick), 3)).zfill(3)} batches/sec")                
             tick = time.time()
         
-        if (batch_id+1)%METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH == 0:
-            evaluation_n_saving_time_start = time.time()
-            
-            print('- - - EVALUATING METRICS  - - - ')
+        if (batch_idx+1)%METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH == 0:            
+            print("- - - EVALUATING METRICS  - - - ")
 
-            count_dict = {'epoch': e,
-                          'total_batches': batch_num}
-            
-            SAVE_MODEL, best_metrics_dict = show_and_get_metrics(model, dataset, count_dict, best_metrics_dict, test_summary_writer)
+            count_dict = {"epoch": e,
+                          "total_batches": batch_num}
+                                                                     
+            SAVE_MODEL, best_metrics_dict = compute_and_store_metrics(model, dataset, count_dict, best_metrics_dict, test_summary_writer)
 
             if SAVE_MODEL:
-                model_save_name = '{}/model_{}_{}'.format(MODEL_DIR, str(e).zfill(2), str(batch_id).zfill(6))
+                model_save_name = f"{MODEL_DIR}/model_{str(e).zfill(2)}_{str(batch_idx).zfill(6)}"
                 model.save_weights(model_save_name)
-                print(f'model saved at >{model_save_name}<!') 
-        
-            total_evaluation_n_saving_time += time.time() - evaluation_n_saving_time_start         
+                print(f"model saved at >{model_save_name}<!") 
         
         batch_num+=1
         tick = time.time()
@@ -239,7 +230,7 @@ for e in range(START_EPOCH, EPOCHS):
     
     #preprocessing_tick = time.time()    
     for batch_id, (x_batch, y_batch) in enumerate(train_gen): # (BATCH_SIZE, MAX_LEN) and (BATCH_SIZE,)
-        print(batch_id, end='\r')   
+        print(batch_id, end="\r")   
         
         if (batch_num!=0) and (batch_num%50_000==0):
             old_lr = optimizer.learning_rate.numpy()

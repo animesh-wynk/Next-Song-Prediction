@@ -16,7 +16,6 @@ def get_timestamp():
     # it will get the time zone of the specified location 
     IST = pytz.timezone('Asia/Kolkata')   
     timestamp = str(datetime.datetime.now(IST))[:19].replace(':', '').replace('-', '_').replace(' ', '_')
-
     return timestamp
 
 
@@ -55,9 +54,6 @@ BUILD_VOCAB_DICT_PATH = os.path.join(PICKLES_DIR_PATH, 'build_vocab.pickle')
 QUALITATIVE_TEST_DATA_PATH  = QUALITATIVE_TEST_DATA_PATH + "song_id_dataset_for_qualitative_assessment_of_rnn_model.csv"
 
 
-
-
-
 ### MULTI-GPU CONFIG
 MAX_REPLICAS_DESIRED = 8
 PHYSICAL_DEVICES = tf.config.list_physical_devices('GPU')
@@ -92,13 +88,11 @@ MAX_LEN = 10                         # maximum length of the input sequece to be
 MAX_TEST_SEQ_LEN = 228
 
 
-
 SONG_PAD_TOKEN = "<pad>"
 SONG_UNK_TOKEN = "<unk>"
 
 SONG_PAD_INDEX = 0
 SONG_UNK_INDEX = 1
-
 
 ### OTHER CONFIG
 POPULAR_SONGS_PERCENTAGE = 0.05 # top 5% songs sorted on frequency, to make the list of popular songs   
@@ -107,32 +101,27 @@ POPULAR_SONGS_PERCENTAGE = 0.05 # top 5% songs sorted on frequency, to make the 
 BATCH_NUM_START = 0
 
 START_EPOCH = 0
-END_EPOCH = 2                                                             # number of epochs for training the model
+END_EPOCH = 2                                                              # number of epochs for training the model
 
-METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH = 75_000                  # metrics evaluation on the test-set and saving model's weights happens after every METRICS_EVALUATION_EVERY_N_BATCH batches
-SHOW_LOSS_EVERY_N_BATCH = 1000                                          # training loss is printed after every SHOW_LOSS_EVERY_N_BATCH batches
-WRITE_SUMMARY = False                                                    # whether to write summary on tensorboard or not 
+METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH = 7_500                 # metrics evaluation on the test-set and saving model's weights happens after every METRICS_EVALUATION_EVERY_N_BATCH batches
+SHOW_LOSS_EVERY_N_BATCH = 500                                          # training loss is printed after every SHOW_LOSS_EVERY_N_BATCH batches
+WRITE_SUMMARY = not False                                                    # whether to write summary on tensorboard or not 
 
-NUM_TEST_SAMPLES_QUANTITATIVE = 3 #10_000                                   # number of testing examples to be used for evaluating all the metrics 
-NUM_TEST_SAMPLES_QUALITATIVE = 10                                       # valid only when QUALITATIVE_RESULTS_ON_HANDPICKED_SONGS is False
+NUM_TEST_SAMPLES_QUANTITATIVE = 10_000                                   # number of testing examples to be used for evaluating all the metrics 
 
-NAME = f"exp12_4_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"
+NAME = f"exp_rnn_7_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"
 
-NAME_BREAKDOWN = 'timestamp_LSTM_DIM_EMB_DIM_MAXLEN'
 SUMMARY_DIR = os.path.join('summary', 'summary_'+NAME )
 METRICS_SUMMARY_DIR = os.path.join('metrics', 'metrics_summary_'+ NAME)
 MODEL_DIR   = os.path.join('models', 'models_'+NAME)
 
 QUALITATIVE_RESULTS_DIR = os.path.join("qualitative_results", "qualitative_results_" + NAME)
 
-
-
 if not os.path.exists(QUALITATIVE_RESULTS_DIR):
     os.makedirs(QUALITATIVE_RESULTS_DIR) 
 
 LOAD_MODEL = False
 LOAD_MODEL_PATH = 'models/models_exp12_2020_12_03_115723_1024_64_20/model_06_024999'
-
 
 ### RECOMMENDATIONS CONFIG
 K = 10
