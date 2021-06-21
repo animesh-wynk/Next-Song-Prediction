@@ -36,11 +36,11 @@ TRAIN_USERS_INFO_PATH = (DATA_BASE_PATH + TRAIN_DATA_DIR_PATH +
 
 # VAL DATA (data from same day)
 VAL_DATA_PATH = (DATA_BASE_PATH + VAL_DATA_DIR_PATH + 
-                   "userSessionizedSongDataPreprocessed_indexed_user_id_seq_2_csv_path/part-00000-d97460d4-ff77-45b5-a3ad-c8b0950709de-c000.csv")
+                   "userSessionizedSongDataPreprocessed_indexed_user_id_seq_2_csv_path/part-00000-fd26b97f-d1aa-4820-86c5-990d582b4522-c000.csv")
 
 # TEST DATA (data from same day)
 TEST_DATA_PATH = (DATA_BASE_PATH + TEST_DATA_DIR_PATH + 
-                   "userSessionizedSongDataPreprocessed_indexed_user_id_seq_2_csv_path/part-00000-3c335e5f-fd34-4d71-a568-194706365ebd-c000.csv") 
+                   "userSessionizedSongDataPreprocessed_indexed_user_id_seq_2_csv_path/part-00000-e30612e2-fbe5-4993-b94b-d5a0d14b5f7f-c000.csv") 
 
 # OTHER DATA PATHS
 QUALITATIVE_TEST_DATA_PATH = "qualitative_test_data/"
@@ -113,7 +113,7 @@ METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH = 75_000                  # metr
 SHOW_LOSS_EVERY_N_BATCH = 1000                                          # training loss is printed after every SHOW_LOSS_EVERY_N_BATCH batches
 WRITE_SUMMARY = False                                                    # whether to write summary on tensorboard or not 
 
-NUM_TEST_SAMPLES_QUANTITATIVE = 10_000                                   # number of testing examples to be used for evaluating all the metrics 
+NUM_TEST_SAMPLES_QUANTITATIVE = 3 #10_000                                   # number of testing examples to be used for evaluating all the metrics 
 NUM_TEST_SAMPLES_QUALITATIVE = 10                                       # valid only when QUALITATIVE_RESULTS_ON_HANDPICKED_SONGS is False
 
 NAME = f"exp12_4_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"

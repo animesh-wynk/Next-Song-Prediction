@@ -125,13 +125,6 @@ for e in range(START_EPOCH, EPOCHS):
     print('- - - TRAIN - - - ')  
     total_loss = 0
     tick = time.time()
-    
-    
-    
-
-
-
-    q("metric evaluation done!")
     for batch_idx, batch in enumerate(train_dist_dataset):        
         loss_value = distributed_train_step(batch)
         print(">>>", loss_value)
@@ -140,7 +133,7 @@ for e in range(START_EPOCH, EPOCHS):
             q('yahanpr!!!')
         
         total_loss += loss_value
-#         print(f'--------------------  {batch_idx}  --------------------')
+
         
         batch_num_show = 50
         if (batch_idx+1)%batch_num_show==0:

@@ -74,7 +74,7 @@ class wynk_sessions_dataset():
             self.popular_songs_num = build_vocab_dict["self.popular_songs_num"]
             self.popular_songs = build_vocab_dict["self.popular_songs"]
             self.idx2item = build_vocab_dict["self.idx2item"]
-            self.idx2item = build_vocab_dict["self.idx2item"]
+            self.item2idx = build_vocab_dict["self.item2idx"]
             self.vocab_size = build_vocab_dict["self.vocab_size"]
             
         else:
@@ -114,7 +114,7 @@ class wynk_sessions_dataset():
                 "self.popular_songs_num": self.popular_songs_num,
                 "self.popular_songs": self.popular_songs,
                 "self.idx2item": self.idx2item,
-                "self.idx2item": self.idx2item,
+                "self.item2idx": self.item2idx,
                 "self.vocab_size": self.vocab_size
                                 }
             

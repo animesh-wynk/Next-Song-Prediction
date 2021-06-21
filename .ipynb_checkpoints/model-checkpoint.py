@@ -47,13 +47,13 @@ class rnn_reco_model(tf.keras.Model):
         self.dense = customLinear(in_units=lstm_dim, out_units=vocab_size)
         self.dense.build((lstm_dim, ))
           
-    def call(self, inp, initial_state=None, eval_mode=False):          
+    def call(self, inp, initial_state=None, training=True):          
         emb = self.emb(inp)
         mask = self.emb.compute_mask(inp)
             
         lstm, state_h, state_c = self.lstm(emb, mask=mask, initial_state=initial_state)
         
-        if eval_mode:
+        if not training:
             logits = self.dense(lstm)
             probs = tf.nn.softmax(logits, axis=-1)        
             return probs, state_h, state_c 
