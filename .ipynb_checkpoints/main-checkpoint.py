@@ -4,7 +4,7 @@ print('tf.__version__: ', tf.__version__)
 
 from dataset import wynk_sessions_dataset
 from model import rnn_reco_model
-# from metrics import show_and_get_metrics
+from metrics import compute_and_store_metrics
 from config import *
 
 strategy = STRATEGY
@@ -23,6 +23,8 @@ if WRITE_SUMMARY:
     train_summary_writer = tf.summary.create_file_writer(os.path.join(SUMMARY_DIR, 'train'))
     test_summary_writer  = tf.summary.create_file_writer(os.path.join(SUMMARY_DIR, 'test'))
     train_summary_counter = 0
+else:
+    test_summary_writer = None
     
 ### Define model and opt  
 with strategy.scope():
@@ -87,13 +89,23 @@ best_metrics_dict = {'best_sps': -1,
                 'best_item_coverage': -1}
 
 
+
+print('- - - EVALUATING METRICS  - - - ')
+
+e = 88
+batch_num = 99
+
+# Evaluating metrics for test set
+count_dict = {"epoch": e, 
+              "total_batches": batch_num}
+
+SAVE_MODEL, best_metrics_dict = compute_and_store_metrics(model, dataset, count_dict, best_metrics_dict, test_summary_writer)
+q("eval tested")
     
-### Training Loop
+### Training loop
 for e in range(START_EPOCH, EPOCHS):
     print(f'EPOCH: {str(e+1).zfill(len(str(EPOCHS)))}/{EPOCHS}')
-    
-    print('- - - TRAIN - - - ')  
-    
+        
     # Initialize python data generator
     train_gen = dataset.preprocessed_data_generator
     
@@ -104,22 +116,28 @@ for e in range(START_EPOCH, EPOCHS):
                                 output_shapes=((BATCH_SIZE, MAX_LEN), (BATCH_SIZE,)) 
                                 )
     
-    print("\nTRAINING")
-    
-    # Try prefetch!
-    #train_gen = train_gen.prefetch(tf.data.AUTOTUNE)
+    # Prefetch data
     train_gen = train_gen.prefetch(tf.data.experimental.AUTOTUNE)
     
-    # Make the tf data generator distributable
+    # Make tf data generator distributable
     train_dist_dataset = strategy.experimental_distribute_dataset(train_gen)
 
-    # Training
+    print('- - - TRAIN - - - ')  
     total_loss = 0
     tick = time.time()
+    
+    
+    
+
+
+
+    q("metric evaluation done!")
     for batch_idx, batch in enumerate(train_dist_dataset):        
         loss_value = distributed_train_step(batch)
+        print(">>>", loss_value)
         
-        q('yahanpr!!!')
+        if batch_idx == 5:
+            q('yahanpr!!!')
         
         total_loss += loss_value
 #         print(f'--------------------  {batch_idx}  --------------------')

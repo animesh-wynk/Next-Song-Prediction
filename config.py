@@ -20,8 +20,6 @@ def get_timestamp():
     return timestamp
 
 
-
-
 # DATA
 DATA_BASE_PATH = "s3://wynk-ml-workspace/projects/_temp/rnn_recommendation/with_metadata/day=2021-05-16to2021-05-22/"
 TRAIN_DATA_DIR_PATH = "train/"
@@ -38,12 +36,11 @@ TRAIN_USERS_INFO_PATH = (DATA_BASE_PATH + TRAIN_DATA_DIR_PATH +
 
 # VAL DATA (data from same day)
 VAL_DATA_PATH = (DATA_BASE_PATH + VAL_DATA_DIR_PATH + 
-                   "userSessionizedSongDataPreprocessed_indexed_user_id_seq_2_csv_path/part-00000-6a55bc3d-a260-4ba2-9e80-7c362f952049-c000.csv")
+                   "userSessionizedSongDataPreprocessed_indexed_user_id_seq_2_csv_path/part-00000-d97460d4-ff77-45b5-a3ad-c8b0950709de-c000.csv")
 
 # TEST DATA (data from same day)
 TEST_DATA_PATH = (DATA_BASE_PATH + TEST_DATA_DIR_PATH + 
-                   "userSessionizedSongDataPreprocessed_indexed_user_id_seq_2_csv_path/part-00000-f29ec78c-66e6-41d7-9f37-752779326538-c000.csv") 
-
+                   "userSessionizedSongDataPreprocessed_indexed_user_id_seq_2_csv_path/part-00000-3c335e5f-fd34-4d71-a568-194706365ebd-c000.csv") 
 
 # OTHER DATA PATHS
 QUALITATIVE_TEST_DATA_PATH = "qualitative_test_data/"
@@ -55,11 +52,7 @@ if not os.path.exists(PICKLES_DIR_PATH):
 SONG2INFO_PICKLE_PATH = os.path.join(PICKLES_DIR_PATH, 'song2info.pickle')
 BUILD_VOCAB_DICT_PATH = os.path.join(PICKLES_DIR_PATH, 'build_vocab.pickle')
 
-QUALITATIVE_TEST_DATA_PATH_ANIMESH  = QUALITATIVE_TEST_DATA_PATH + "song_info_dataset_for_qualitative_assessment_of_rnn_model.csv"
-QUALITATIVE_TEST_DATA_PATH_SANIDHYA = QUALITATIVE_TEST_DATA_PATH + "test_data_top_50_similar_songs_cleaned.csv"
-
-
-
+QUALITATIVE_TEST_DATA_PATH  = QUALITATIVE_TEST_DATA_PATH + "song_id_dataset_for_qualitative_assessment_of_rnn_model.csv"
 
 
 
@@ -96,30 +89,19 @@ SONG_EMB_DIM = 64
 TIME_BUCKET_EMB_DIM = 16
 USER_EMB_DIM = 64
 MAX_LEN = 10                         # maximum length of the input sequece to be fed inside the model while training 
+MAX_TEST_SEQ_LEN = 228
 
 
 
-
-
-
-SONG_PAD_TOKEN = '<pad>'
-SONG_UNK_TOKEN = '<unk>'
+SONG_PAD_TOKEN = "<pad>"
+SONG_UNK_TOKEN = "<unk>"
 
 SONG_PAD_INDEX = 0
 SONG_UNK_INDEX = 1
 
 
-
-
-
 ### OTHER CONFIG
 POPULAR_SONGS_PERCENTAGE = 0.05 # top 5% songs sorted on frequency, to make the list of popular songs   
-
-
-
-
-
-
 
 
 BATCH_NUM_START = 0
@@ -138,9 +120,13 @@ NAME = f"exp12_4_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"
 
 NAME_BREAKDOWN = 'timestamp_LSTM_DIM_EMB_DIM_MAXLEN'
 SUMMARY_DIR = os.path.join('summary', 'summary_'+NAME )
-METRICS_SUMMARY_DIR = os.path.join('metrics', 'metrics_summary_'+NAME)
+METRICS_SUMMARY_DIR = os.path.join('metrics', 'metrics_summary_'+ NAME)
 MODEL_DIR   = os.path.join('models', 'models_'+NAME)
-QUALITATIVE_RESULTS_DIR = os.path.join('qualitative_results', 'qualitative_results_'+NAME)
+
+QUALITATIVE_RESULTS_DIR = os.path.join("qualitative_results", "qualitative_results_" + NAME)
+
+
+
 if not os.path.exists(QUALITATIVE_RESULTS_DIR):
     os.makedirs(QUALITATIVE_RESULTS_DIR) 
 
