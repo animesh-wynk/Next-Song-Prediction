@@ -107,7 +107,7 @@ POPULAR_SONGS_PERCENTAGE = 0.05 # top 5% songs sorted on frequency, to make the 
 BATCH_NUM_START = 0
 
 START_EPOCH = 0
-EPOCHS = 10                                                             # number of epochs for training the model
+END_EPOCH = 2                                                             # number of epochs for training the model
 
 METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH = 75_000                  # metrics evaluation on the test-set and saving model's weights happens after every METRICS_EVALUATION_EVERY_N_BATCH batches
 SHOW_LOSS_EVERY_N_BATCH = 1000                                          # training loss is printed after every SHOW_LOSS_EVERY_N_BATCH batches

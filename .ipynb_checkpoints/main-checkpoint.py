@@ -61,7 +61,6 @@ with strategy.scope():
         #tf.print('\nper_example_loss: ', per_example_loss)
         return tf.nn.compute_average_loss(per_example_loss, global_batch_size=BATCH_SIZE) 
 
-
     
 @tf.function
 def distributed_train_step(dataset_inputs):
@@ -92,19 +91,11 @@ best_metrics_dict = {'best_sps': -1,
 
 print('- - - EVALUATING METRICS  - - - ')
 
-e = 88
-batch_num = 99
 
-# Evaluating metrics for test set
-count_dict = {"epoch": e, 
-              "total_batches": batch_num}
-
-SAVE_MODEL, best_metrics_dict = compute_and_store_metrics(model, dataset, count_dict, best_metrics_dict, test_summary_writer)
-q("eval tested")
-    
+batch_num = BATCH_NUM_START
 ### Training loop
-for e in range(START_EPOCH, EPOCHS):
-    print(f'EPOCH: {str(e+1).zfill(len(str(EPOCHS)))}/{EPOCHS}')
+for e in range(START_EPOCH, END_EPOCH):
+    print(f'EPOCH: {str(e+1).zfill(len(str(END_EPOCH)))}/{END_EPOCH}')
         
     # Initialize python data generator
     train_gen = dataset.preprocessed_data_generator
@@ -126,35 +117,42 @@ for e in range(START_EPOCH, EPOCHS):
     total_loss = 0
     tick = time.time()
     for batch_idx, batch in enumerate(train_dist_dataset):        
-        loss_value = distributed_train_step(batch)
-        print(">>>", loss_value)
-        
-        if batch_idx == 5:
-            q('yahanpr!!!')
-        
+        loss_value = distributed_train_step(batch)    
         total_loss += loss_value
-
-        
-        batch_num_show = 50
-        if (batch_idx+1)%batch_num_show==0:
-            avg_loss = total_loss.numpy()/(batch_idx+1)
-            print(f'loss at batch_idx: {str(batch_idx+1).zfill(8)} is {str(round(avg_loss, 5)).zfill(5)} at {str(round((batch_num_show)/(time.time() - tick), 3)).zfill(3)} batches/sec' )                
-            tick = time.time()
-        
-        if batch_idx == 50000:
-            q()
         
         if WRITE_SUMMARY:
             with train_summary_writer.as_default():
-                tf.summary.scalar('train/sampled-softmax loss', batch_idx+5, step=train_summary_counter)                
+                tf.summary.scalar('train/sampled-softmax loss', loss_value.numpy(), step=train_summary_counter)                
                 train_summary_counter += 1
+                
+        # Show loss
+        if (batch_idx+1)%SHOW_LOSS_EVERY_N_BATCH==0:
+            print(f'loss at batch_idx: {str(batch_idx).zfill(8)} is {str(round(loss_value.numpy(), 5)).zfill(5)} at {str(round((SHOW_LOSS_EVERY_N_BATCH)/(time.time() - tick), 3)).zfill(3)} batches/sec' )                
+            tick = time.time()
+        
+        if (batch_id+1)%METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH == 0:
+            evaluation_n_saving_time_start = time.time()
+            
+            print('- - - EVALUATING METRICS  - - - ')
+
+            count_dict = {'epoch': e,
+                          'total_batches': batch_num}
+            
+            SAVE_MODEL, best_metrics_dict = show_and_get_metrics(model, dataset, count_dict, best_metrics_dict, test_summary_writer)
+
+            if SAVE_MODEL:
+                model_save_name = '{}/model_{}_{}'.format(MODEL_DIR, str(e).zfill(2), str(batch_id).zfill(6))
+                model.save_weights(model_save_name)
+                print(f'model saved at >{model_save_name}<!') 
+        
+            total_evaluation_n_saving_time += time.time() - evaluation_n_saving_time_start         
+        
+        batch_num+=1
+        tick = time.time()
         
         
-    q() 
 
-
-
-q()
+q("training over")
 
 if WRITE_SUMMARY:
     # SUMMARY_DIR is the path of the directory where the tensorboard SummaryWriter files are written
