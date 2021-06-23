@@ -1,4 +1,5 @@
 import os, shutil, pdb, time
+import numpy as np
 import tensorflow as tf
 print(f"tf.__version__: {tf.__version__}")
 
@@ -6,6 +7,11 @@ from dataset import wynk_sessions_dataset
 from model import rnn_reco_model
 from metrics import compute_and_store_metrics
 from config import *
+
+def get_time_elapsed_in_h_m_s(time_elapsed_in_seconds):
+    m, s = divmod(time_elapsed_in_seconds, 60)
+    h, m = divmod(m, 60)
+    return f"{str(int(h)).zfill(2)} h {str(int(m)).zfill(2)} m {str(int(s)).zfill(2)} s"
 
 strategy = STRATEGY
 print(f"Number of devices: {strategy.num_replicas_in_sync}")
@@ -25,7 +31,7 @@ if WRITE_SUMMARY:
     train_summary_counter = 0
 else:
     test_summary_writer = None
-    
+
 ### Define model and opt  
 with strategy.scope():
     model = rnn_reco_model(dataset.vocab_size, SONG_EMB_DIM, LSTM_DIM)
@@ -110,24 +116,25 @@ for e in range(START_EPOCH, END_EPOCH):
 
     total_loss = 0
     tick = time.time()
-    for batch_idx, batch in enumerate(train_dist_dataset):      
-        print(f">>>{str(batch_idx).zfill(6)}", end="\r")
+    for batch_idx, batch in enumerate(train_dist_dataset): 
+        print(f"{str(batch_idx).zfill(6)}", end="\r")
         loss_value = distributed_train_step(batch)    
         total_loss += loss_value
         
+        # Write summary for tensorboard
         if WRITE_SUMMARY:
             with train_summary_writer.as_default():
-                tf.summary.scalar("train/sampled-softmax loss", loss_value.numpy(), step=train_summary_counter)       
+                tf.summary.scalar("train/sampled-softmax loss", loss_value.numpy(), step = train_summary_counter)       
                 train_summary_counter += 1
                 
-        # Show loss
         if (batch_idx+1)%SHOW_LOSS_EVERY_N_BATCH==0:
-            print(f"loss at batch_idx: {str(batch_idx).zfill(8)} is {str(round(loss_value.numpy(), 5)).zfill(5)} at {str(round((SHOW_LOSS_EVERY_N_BATCH)/(time.time() - tick), 3)).zfill(3)} batches/sec")                
+            print(f"loss at batch_idx: {str(batch_idx).zfill(8)} is {str(round(total_loss.numpy()/SHOW_LOSS_EVERY_N_BATCH, 5)).zfill(5)} at {str(round((SHOW_LOSS_EVERY_N_BATCH)/(time.time() - tick), 3)).zfill(3)} batches/sec")             
+            total_loss = 0
             tick = time.time()
         
         if (batch_idx+1)%METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH == 0:            
+            eval_tick = time.time()
             print("- - - EVALUATING METRICS  - - - ")
-
             count_dict = {"epoch": e,
                           "total_batches": batch_num}
                                                                      
@@ -137,10 +144,10 @@ for e in range(START_EPOCH, END_EPOCH):
                 model_save_name = f"{MODEL_DIR}/model_{str(e).zfill(2)}_{str(batch_idx).zfill(6)}"
                 model.save_weights(model_save_name)
                 print(f"model saved at >{model_save_name}<!") 
-        
+            time_elapsed_in_eval_step = time.time() - eval_tick
+            print(f"time elapsed in evaluation step: {get_time_elapsed_in_h_m_s(time_elapsed_in_eval_step)}")
+            
         batch_num+=1
-        tick = time.time()
-        
         
 
 q("training over")

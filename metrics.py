@@ -4,6 +4,7 @@ import tensorflow as tf
 
 from config import *
 
+        
 def computeSPS(top_k_recommendations, next_items):
     '''
     The Short-term Prediction Success captures the
@@ -15,16 +16,16 @@ def computeSPS(top_k_recommendations, next_items):
 
     returns sps (%)
     '''
+    print("Computing SPS...")
     count = 0
     # print("Calculating SPS...")
-    for i in range(len(next_items)):
-        print(f"{str(i).zfill(len(str(len(next_items))))}/{len(next_items)}", end="\r" )
-        
+    for i in range(len(next_items)):        
         # print('next_items[i]: ', next_items[i])
         # print('top_k_recommendations[i]: ', top_k_recommendations[i])
-
         count += next_items[i] in top_k_recommendations[i]     
+    
     return (count/len(next_items))*100
+
     
 def computeRecall(top_k_recommendations, recommendations_GT):
     '''
@@ -36,21 +37,21 @@ def computeRecall(top_k_recommendations, recommendations_GT):
 
     returns recall (%)
     '''
-
+    print("Computing Recall...")
     num_seq = len(top_k_recommendations)    
     correct_recommendations_batch = np.zeros((num_seq))
     
 #     print('Calculating Recall...')    
     # iterate over every data point
-    for i in range(num_seq):
-        print(f"{str(i).zfill(len(str(num_seq)))}/{num_seq}", end="\r" )        
-        
+    for i in range(num_seq):        
         num_correct_recommendations = sum([1 for j in top_k_recommendations[i] if j in recommendations_GT[i]])
         correct_recommendations_batch[i] = num_correct_recommendations 
     
     unique_recommendation_GT = [len(set(i)) for i in recommendations_GT]
     recall = np.mean(correct_recommendations_batch/unique_recommendation_GT)*100
+    
     return recall
+
 
 def computeItemCoverage(top_k_recommendations, recommendations_GT):
     '''
@@ -62,24 +63,21 @@ def computeItemCoverage(top_k_recommendations, recommendations_GT):
 
     returns item_coverage
     '''
-    
-    # filtered_predicted_recommendations_array
-
-    # print('-----------')
+    print("Computing Item Coverage...")
     num_seq = len(top_k_recommendations)
     item_coverage = []
 
 #     print('Calculating Item Coverage...')    
     # iterate over every data point
-    for i in range(num_seq):
-        print(f"{str(i).zfill(len(str(num_seq)))}/{num_seq}", end="\r" )        
-            
+    for i in range(num_seq):            
         unique_correct_recommendations = [j for j in top_k_recommendations[i] if j in recommendations_GT[i]]
         # print('unique_correct_recommendations: ', unique_correct_recommendations)
         item_coverage.extend(unique_correct_recommendations)
 
     item_coverage = len(set(item_coverage))
+    
     return item_coverage
+
 
 def computeUserCoverage(top_k_recommendations, recommendation_GT):
     '''
@@ -94,28 +92,28 @@ def computeUserCoverage(top_k_recommendations, recommendation_GT):
 
     returns user_coverage (%)
     '''
-    # filtered_predicted_recommendations_array
+    print("Computing User Coverage...")
     
     bs = len(top_k_recommendations)    
     users_with_atleast_one_corect_recommendation_batch = []
     
 #     print('Calculating User Coverage...')    
     # iterate over every data point
-    for idx, b in enumerate(range(bs)):
-        print(f'{str(idx).zfill(len(str(bs)))}/{bs}', end='\r' )   
-        
+    for idx, b in enumerate(range(bs)):        
         recommendations = top_k_recommendations[b]
         # print('recommendations: ', recommendations)
         atleast_one_corect_recommendation = any([1 for i in list(recommendations) if i in recommendation_GT[b]])
         users_with_atleast_one_corect_recommendation_batch.append(atleast_one_corect_recommendation)
-
+        
     user_coverage = np.mean(users_with_atleast_one_corect_recommendation_batch)*100
+    
     return user_coverage
 
 def computePopularRecommendations(top_k_recommendations, popular_songs):
     '''
     The percentage of recommended songs that lies in list of popular songs.
     '''
+    print("Computing Popular Recommendations...")
     seq_len = len(top_k_recommendations)
     
     popular_songs_count = 0
@@ -129,7 +127,7 @@ def get_metrics(model, dataset):
     top_k_recommendations, next_items, recommendations_GT = get_top_k_recommendations(model, dataset) 
 
     # Compute sps, recall, item_coverage, user_coverage
-    print('Evaluating Metrics...')
+    print("Evaluating Metrics...")
     sps = computeSPS(top_k_recommendations, next_items)
     recall = computeRecall(top_k_recommendations, recommendations_GT)
     item_coverage = computeItemCoverage(top_k_recommendations, recommendations_GT)
@@ -167,11 +165,11 @@ def compute_and_store_metrics(model, dataset, count_dict, best_metrics_dict, tes
     print(f"item_coverage : {item_coverage}")
     print(f"popular_recommendations: {round(popular_recommendations, 2)}%\n")
     # print(f'user_coverage : {round(user_coverage, 2)}%\n')
-            
+
     if WRITE_SUMMARY:        
         with test_summary_writer.as_default():
-            tf.summary.scalar("recall"                 , recall       , step=count_dict["total_batches"])            
             tf.summary.scalar("sps"                    , sps          , step=count_dict["total_batches"])            
+            tf.summary.scalar("recall"                 , recall       , step=count_dict["total_batches"])            
             tf.summary.scalar("item_coverage"          , item_coverage, step=count_dict["total_batches"])            
             tf.summary.scalar("popular_recommendations", popular_recommendations, step=count_dict["total_batches"])
             # tf.summary.scalar('user_coverage', user_coverage, step=count_dict['total_batches'])
