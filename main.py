@@ -93,6 +93,7 @@ print("- - - TRAIN - - - ")
 best_metrics_dict = {'best_sps': -1,
                 'best_recall': -1,
                 'best_item_coverage': -1}
+
 batch_num = BATCH_NUM_START
 ### Training loop
 for e in range(START_EPOCH, END_EPOCH):
@@ -105,7 +106,7 @@ for e in range(START_EPOCH, END_EPOCH):
     train_gen = tf.data.Dataset.from_generator(
                                 train_gen,
                                 output_types=(tf.dtypes.int64, tf.dtypes.int64),
-                                output_shapes=((BATCH_SIZE, MAX_LEN), (BATCH_SIZE,)) 
+                                output_shapes=((None, MAX_LEN), (None,)) 
                                 )
     
     # Prefetch data
