@@ -115,10 +115,10 @@ def computePopularRecommendations(top_k_recommendations, popular_songs):
     '''
     print("Computing Popular Recommendations...")
     seq_len = len(top_k_recommendations)
-    
+    popular_songs_set = set(popular_songs)
     popular_songs_count = 0
-    for i in range(seq_len):        
-        popular_songs_count += sum([1 for j in top_k_recommendations[i] if j in popular_songs])
+    for i in range(seq_len):  
+        popular_songs_count += len(set(top_k_recommendations[i]).intersection(popular_songs_set))
 
     return (popular_songs_count/(len(top_k_recommendations)*len(top_k_recommendations[0])))*100
 
@@ -216,7 +216,7 @@ def get_top_k_recommendations(model, dataset, k=K):
     
     for chunk_idx, chunk in enumerate(pd.read_csv(TEST_DATA_PATH, chunksize=1, nrows=NUM_TEST_SAMPLES_QUANTITATIVE)):        
     
-        print(f"{str(chunk_idx).zfill(len(str(NUM_TEST_SAMPLES_QUANTITATIVE)))}/{NUM_TEST_SAMPLES_QUANTITATIVE}", end="\r" )
+        # print(f"{str(chunk_idx).zfill(len(str(NUM_TEST_SAMPLES_QUANTITATIVE)))}/{NUM_TEST_SAMPLES_QUANTITATIVE}", end="\r" )
         
         chunk_array = np.squeeze(chunk.to_numpy())
 
