@@ -105,7 +105,7 @@ END_EPOCH = 3                                                              # num
 
 METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH = 25_000                 # metrics evaluation on the test-set and saving model's weights happens after every METRICS_EVALUATION_EVERY_N_BATCH batches
 SHOW_LOSS_EVERY_N_BATCH = 1_000                                          # training loss is printed after every SHOW_LOSS_EVERY_N_BATCH batches
-WRITE_SUMMARY = not False                                                    # whether to write summary on tensorboard or not 
+WRITE_SUMMARY = True                                                    # whether to write summary on tensorboard or not 
 
 NUM_TEST_SAMPLES_QUANTITATIVE = 10_000                                   # number of testing examples to be used for evaluating all the metrics 
 
