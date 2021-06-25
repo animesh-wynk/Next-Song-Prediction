@@ -1,7 +1,6 @@
-import os, shutil, pdb, time
+import os, shutil, pdb, time, sys
 import numpy as np
 import tensorflow as tf
-print(f"tf.__version__: {tf.__version__}")
 
 from dataset import wynk_sessions_dataset
 from model import rnn_reco_model
@@ -12,6 +11,13 @@ def get_time_elapsed_in_h_m_s(time_elapsed_in_seconds):
     m, s = divmod(time_elapsed_in_seconds, 60)
     h, m = divmod(m, 60)
     return f"{str(int(h)).zfill(2)} h {str(int(m)).zfill(2)} m {str(int(s)).zfill(2)} s"
+
+if REDIRECT_STD_OUT_TO_TXT_FILE:
+    # Redirecting stdout and stderr to txt files
+    sys.stdout = open(f"{os.path.join(LOG_DIR, 'stdout')}.txt", "w")
+    sys.stderr = open(f"{os.path.join(LOG_DIR, 'stderr')}.txt", "w")
+
+print(f"tf.__version__: {tf.__version__}")
 
 strategy = STRATEGY
 print(f"Number of devices: {strategy.num_replicas_in_sync}")
@@ -118,14 +124,23 @@ for e in range(START_EPOCH, END_EPOCH):
     total_loss = 0
     tick = time.time()
     for batch_idx, batch in enumerate(train_dist_dataset): 
-        print(f"{str(batch_idx).zfill(6)}", end="\r")
+        
+        """
+        # LR decay
+        if (batch_num!=0) and (batch_num%50_000==0):
+            old_lr = optimizer.learning_rate.numpy()
+            optimizer.learning_rate = optimizer.learning_rate.numpy()*0.95
+            print(f"lr changed from {old_lr} to {optimizer.learning_rate.numpy()}")
+        """ 
+            
+        if not REDIRECT_STD_OUT_TO_TXT_FILE:print(f"{str(batch_idx).zfill(6)}", end="\r")
+
         loss_value = distributed_train_step(batch)    
         total_loss += loss_value
         
-        # Write summary for tensorboard
         if WRITE_SUMMARY:
             with train_summary_writer.as_default():
-                tf.summary.scalar("train/sampled-softmax loss", loss_value.numpy(), step = train_summary_counter)       
+                tf.summary.scalar("train/sampled-softmax loss", loss_value.numpy(), step = train_summary_counter)     
                 train_summary_counter += 1
                 
         if (batch_idx+1)%SHOW_LOSS_EVERY_N_BATCH==0:
@@ -146,147 +161,12 @@ for e in range(START_EPOCH, END_EPOCH):
                 model.save_weights(model_save_name)
                 print(f"model saved at >{model_save_name}<!") 
             time_elapsed_in_eval_step = time.time() - eval_tick
-            print(f"time elapsed in evaluation step: {get_time_elapsed_in_h_m_s(time_elapsed_in_eval_step)}")
+            print(f"time elapsed in evaluation step: {get_time_elapsed_in_h_m_s(time_elapsed_in_eval_step)}")         
             
         batch_num+=1
         
+if REDIRECT_STD_OUT_TO_TXT_FILE:        
+    sys.stdout.close()
+    sys.stderr.close()
 
 q("training over")
-
-if WRITE_SUMMARY:
-    # SUMMARY_DIR is the path of the directory where the tensorboard SummaryWriter files are written
-    # the directory is removed, if it already exists
-    if os.path.exists(SUMMARY_DIR):
-        shutil.rmtree(SUMMARY_DIR)
-
-    # os.makedirs(SUMMARY_DIR)
-    train_summary_writer = tf.summary.create_file_writer(os.path.join(SUMMARY_DIR, 'train'))
-    test_summary_writer  = tf.summary.create_file_writer(os.path.join(SUMMARY_DIR, 'test'))
-    train_summary_counter = 0
-
-
-model = rnn_recommendation_system_model(dataset.NUM_ITEMS, EMB_DIM, LSTM_DIM)
-
-if LOAD_MODEL:
-    model.build(input_shape=(None, MAX_LEN))
-    print(model.summary())
-    model.load_weights(LOAD_MODEL_PATH)
-    print(f'model loaded: {LOAD_MODEL_PATH}')
-    
-optimizer = tf.keras.optimizers.Adam()   
-loss_value_batches = tf.keras.metrics.Mean(name='mean', dtype=None)
- 
-best_metrics_dict = {'best_sps': -1,
-                'best_recall': -1,
-                'best_item_coverage': -1}
-
-# time_profile = {'preprocessing': 0,
-#                'forward': 0,
-#                'loss_func': 0,
-#                'grads': 0,
-#                'optimizer': 0}
-
-@tf.function
-def get_loss_and_grads(x_batch, y_batch):
-
-    with tf.GradientTape() as tape:
-        
-        #forward_tick = time.time()
-        lstm = model(x_batch, training=True) # (bs, 50), (bs, 646677)        
-        #time_profile['forward'] += time.time() - forward_tick        
-
-        # weights (num_items, lstm_dim) 
-        # biases (num_items,)
-        # labels (bs, 1)
-        # inputs (bs, lstm_dim), where 16 is the bs 
-        
-        #loss_func_tick = time.time()
-        last_layer = model.layers[-1].weights
-        loss_value = tf.nn.sampled_softmax_loss(
-            weights=tf.transpose(last_layer[0]),
-            biases=last_layer[1],
-            labels=tf.expand_dims(y_batch, -1),
-            inputs=lstm,
-            num_sampled = 15,
-            num_classes = dataset.NUM_ITEMS,
-            num_true = 1,
-            remove_accidental_hits=True,
-            name = 'sampled_softmax_loss'
-        )        # (bs, )
-        #time_profile['loss_func'] += time.time() - loss_func_tick
-        
-        #grads_tick = time.time()
-        grads = tape.gradient(loss_value, model.trainable_variables)
-        #time_profile['grads'] += time.time() - grads_tick
-        
-        #optimizer_tick = time.time()
-        optimizer.apply_gradients(zip(grads, model.trainable_variables))
-        #time_profile['optimizer'] += time.time() - optimizer_tick
-        
-        return loss_value
-
-batch_num = BATCH_NUM_START
-for e in range(START_EPOCH, EPOCHS):
-    print(f'EPOCH: {str(e+1).zfill(len(str(EPOCHS)))}/{EPOCHS}')
-    
-    print('- - - TRAIN - - - ')  
-    train_gen = dataset.preprocessed_data_generator(e)
-#     train_gen = dataset.create_generator_v3()
-    
-    tick = time.time()
-    total_evaluation_n_saving_time = 0
-    
-    #preprocessing_tick = time.time()    
-    for batch_id, (x_batch, y_batch) in enumerate(train_gen): # (BATCH_SIZE, MAX_LEN) and (BATCH_SIZE,)
-        print(batch_id, end="\r")   
-        
-        if (batch_num!=0) and (batch_num%50_000==0):
-            old_lr = optimizer.learning_rate.numpy()
-            optimizer.learning_rate = optimizer.learning_rate.numpy()*0.95
-            print(f'lr changed from {old_lr} to {optimizer.learning_rate.numpy()}')
-
-        #time_profile['preprocessing'] += time.time() - preprocessing_tick
-        
-        loss_value = get_loss_and_grads(x_batch, y_batch)                
-        loss_value = tf.math.reduce_mean(loss_value).numpy()
-        loss_value_batches.update_state(loss_value)        
-
-        '''
-        if batch_id==100:
-            print('batch_id: ', batch_id)            
-            pprint(time_profile)
-            total_time = 0
-            for k in time_profile:
-                total_time += time_profile[k]            
-            print('total_time: ', total_time)
-            print('>>>', time.time() - tick)
-            q()                 
-        preprocessing_tick = time.time()    
-        continue
-        print('should no get printed')
-        '''
-        if WRITE_SUMMARY:
-            with train_summary_writer.as_default():
-                tf.summary.scalar('train/sampled-softmax loss'             , loss_value, step=train_summary_counter)                
-                train_summary_counter += 1
-                    
-        if (batch_id+1)%SHOW_LOSS_EVERY_N_BATCH == 0:
-            print(f'batch_id: {batch_id+1} | loss: {round(float(loss_value_batches.result().numpy()), 5)} | {round((batch_id+1)/(time.time() - tick - total_evaluation_n_saving_time), 3)} batches/sec')
-
-        if (batch_id+1)%METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH == 0:
-            evaluation_n_saving_time_start = time.time()
-            
-            print('- - - EVALUATING METRICS  - - - ')
-            # Evaluating metrics for test set
-            count_dict = {'epoch': e,
-                          'total_batches': batch_num}
-            
-            SAVE_MODEL, best_metrics_dict = show_and_get_metrics(model, dataset, count_dict, best_metrics_dict, test_summary_writer)
-
-            if SAVE_MODEL:
-                model_save_name = '{}/model_{}_{}'.format(MODEL_DIR, str(e).zfill(2), str(batch_id).zfill(6))
-                model.save_weights(model_save_name)
-                print(f'model saved at >{model_save_name}<!') 
-        
-            total_evaluation_n_saving_time += time.time() - evaluation_n_saving_time_start         
-        batch_num+=1

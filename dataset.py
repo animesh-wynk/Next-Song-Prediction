@@ -17,6 +17,15 @@ class wynk_sessions_dataset():
         # Make song2info dictionary
         self._map_song2info()
         
+        
+    def _make_batch_full(self, tuple_of_batches):
+        num_rows_to_fill = MAX_REPLICAS_DESIRED - tuple_of_batches[0].shape[0]        
+        rep_arrays = [np.array(b[:1, :]) if len(b.shape) > 1 else np.array(b[:1]) for b in tuple_of_batches]
+        rep_arrays = [np.concatenate([rep for i in range(num_rows_to_fill)], axis = 0) for rep in rep_arrays]        
+        tuple_of_batches_filled = (np.concatenate((tuple_of_batches[i], rep_arrays[i]), axis = 0) for i in range(len(tuple_of_batches)))
+        return tuple_of_batches_filled
+        
+        
     def preprocessed_data_generator(self):
         _train_data_path = self.train_data_path
         print(f"using {_train_data_path} in preprocessed_data_generator()")
@@ -25,6 +34,10 @@ class wynk_sessions_dataset():
 
             song_emb_id_x_batch = chunk_np[:, 1:1+MAX_LEN] # (bs, max_len=10)
             song_emb_id_y_batch = chunk_np[:, 1+MAX_LEN]   # (bs, )
+            
+            # Filling in the batches to have MAX_REPLICAS_DESIRED data points so that it could run in a multi-GPU setting
+            if song_emb_id_x_batch.shape[0] < MAX_REPLICAS_DESIRED:
+                song_emb_id_x_batch, song_emb_id_y_batch = self._make_batch_full((song_emb_id_x_batch, song_emb_id_y_batch))
             
             yield song_emb_id_x_batch, song_emb_id_y_batch
                 
@@ -143,4 +156,4 @@ if __name__ == "__main__":
         if batch_idx==0:
             q("bas bohot hua")
     
-    q('dun.')
+    q("dun.")

@@ -147,9 +147,9 @@ def generate_qualitative_results_on_handpicked_songs(model, write_name, handpick
         if len(seq_processed) > 0:
             handpicked_songs_list_processed.append(seq_processed)
 
-    print(f"\nGenerating Qualitative Results on Handpicked {len(handpicked_songs_list_processed)} Test Samples ...")
+    print(f"\nGenerating Qualitative Results (recommendations in sequence) on Handpicked {len(handpicked_songs_list_processed)} Test Samples ...")
     for inp in handpicked_songs_list_processed:
-        visualize_recommendations(model, write_name, dataset, tf.constant([inp]), num_recommendation_timesteps=NUM_RECOMMENDATION_TIMESTEPS)
+        visualize_recommendations_in_sequence(model, write_name, dataset, tf.constant([inp]), num_recommendation_timesteps=NUM_RECOMMENDATION_TIMESTEPS)
         
         
 def compute_and_store_metrics(model, dataset, count_dict, best_metrics_dict, test_summary_writer):
@@ -215,8 +215,9 @@ def get_top_k_recommendations(model, dataset, k=K):
     recommendations_GT = []
     
     for chunk_idx, chunk in enumerate(pd.read_csv(TEST_DATA_PATH, chunksize=1, nrows=NUM_TEST_SAMPLES_QUANTITATIVE)):        
-    
-        # print(f"{str(chunk_idx).zfill(len(str(NUM_TEST_SAMPLES_QUANTITATIVE)))}/{NUM_TEST_SAMPLES_QUANTITATIVE}", end="\r" )
+
+        if not REDIRECT_STD_OUT_TO_TXT_FILE:
+            print(f"{str(chunk_idx).zfill(len(str(NUM_TEST_SAMPLES_QUANTITATIVE)))}/{NUM_TEST_SAMPLES_QUANTITATIVE}", end="\r" )
         
         chunk_array = np.squeeze(chunk.to_numpy())
 
@@ -253,7 +254,7 @@ def get_top_k_recommendations(model, dataset, k=K):
 
 
 ##### FOR GENERATING QUALITATIVE RESULTS ##### 
-def visualize_recommendations(model, write_name, dataset, input_idx, gt=None, num_recommendation_timesteps=5):
+def visualize_recommendations_in_sequence(model, write_name, dataset, input_idx, gt=None, num_recommendation_timesteps=5):
     '''
     input_idx- np array or tf tensor of shape (1, ?), where 1 is the batch size and ? is the length of the input sequence which is not fixed 
     gt       - np array or tf tensor of shape (1, ?), where 1 is the batch size and ? is the length of the input sequence which is not fixed 
