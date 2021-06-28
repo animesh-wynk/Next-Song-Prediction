@@ -109,18 +109,18 @@ def computeUserCoverage(top_k_recommendations, recommendation_GT):
     
     return user_coverage
 
-def computePopularRecommendations(top_k_recommendations, popular_songs):
+def computePopularRecommendations(top_k_recommendations, popular_song_ids):
     '''
     The percentage of recommended songs that lies in list of popular songs.
     '''
     print("Computing Popular Recommendations...")
     seq_len = len(top_k_recommendations)
-    popular_songs_set = set(popular_songs)
-    popular_songs_count = 0
+    popular_song_ids_set = set(popular_song_ids)
+    popular_songs_reco_count = 0
     for i in range(seq_len):  
-        popular_songs_count += len(set(top_k_recommendations[i]).intersection(popular_songs_set))
+        popular_songs_reco_count += len(set(top_k_recommendations[i]).intersection(popular_song_ids_set))
 
-    return (popular_songs_count/(len(top_k_recommendations)*len(top_k_recommendations[0])))*100
+    return (popular_songs_reco_count/(len(top_k_recommendations)*len(top_k_recommendations[0])))*100
 
 def get_metrics(model, dataset):
     
@@ -132,7 +132,7 @@ def get_metrics(model, dataset):
     recall = computeRecall(top_k_recommendations, recommendations_GT)
     item_coverage = computeItemCoverage(top_k_recommendations, recommendations_GT)
     # user_coverage = computeUserCoverage(top_k_recommendations, recommendations_GT)
-    popular_recommendations = computePopularRecommendations(top_k_recommendations, dataset.popular_songs)
+    popular_recommendations = computePopularRecommendations(top_k_recommendations, dataset.popular_song_ids)
     
     return sps, recall, item_coverage, popular_recommendations#, user_coverage
 

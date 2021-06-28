@@ -85,7 +85,7 @@ class wynk_sessions_dataset():
             infile.close()
 
             self.popular_songs_num = build_vocab_dict["self.popular_songs_num"]
-            self.popular_songs = build_vocab_dict["self.popular_songs"]
+            self.popular_song_ids = build_vocab_dict["self.popular_song_ids"]
             self.idx2item = build_vocab_dict["self.idx2item"]
             self.item2idx = build_vocab_dict["self.item2idx"]
             self.vocab_size = build_vocab_dict["self.vocab_size"]
@@ -103,11 +103,6 @@ class wynk_sessions_dataset():
             song_info_df = song_info_df.sort_values(by = "frequency", ascending = False)
             song_info_df = song_info_df.reset_index(drop = True)
 
-            # Store list of popular song (top 5% songs sorted by frequency)
-            self.popular_songs_num = int(POPULAR_SONGS_PERCENTAGE*song_info_df.shape[0])
-            print('self.popular_songs_num: ', self.popular_songs_num)        
-            self.popular_songs = song_info_df.iloc[:self.popular_songs_num, :]["song_id"].to_list()
-
             # Make dictionaries
             self.item2idx = {}    
             self.item2idx[SONG_PAD_TOKEN] = SONG_PAD_INDEX
@@ -118,14 +113,20 @@ class wynk_sessions_dataset():
             self.idx2item = {song_embedding_id:song_id for song_id, song_embedding_id in self.item2idx.items()}
 
             assert len(self.item2idx) == len(self.idx2item), "len(self.item2idx) != len(self.idx2item)"
-
+            
+            # Store list of popular song (top 5% songs sorted by frequency)
+            self.popular_songs_num = int(POPULAR_SONGS_PERCENTAGE*song_info_df.shape[0])
+            print('self.popular_songs_num: ', self.popular_songs_num)        
+            popular_songs = song_info_df.iloc[:self.popular_songs_num, :]["song_id"].to_list()
+            self.popular_song_ids = [self.item2idx[i] for i in popular_songs]
+            
             self.vocab_size = len(self.item2idx) # earlier self.NUM_ITEMS
             print("self.vocab_size: ", self.vocab_size)
             
             # Put all the variables into in dictionary
             build_vocab_dict = {
                 "self.popular_songs_num": self.popular_songs_num,
-                "self.popular_songs": self.popular_songs,
+                "self.popular_song_ids": self.popular_song_ids,
                 "self.idx2item": self.idx2item,
                 "self.item2idx": self.item2idx,
                 "self.vocab_size": self.vocab_size
