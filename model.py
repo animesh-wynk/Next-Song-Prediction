@@ -41,17 +41,36 @@ class customLinear(Layer):
 class rnn_reco_model(tf.keras.Model):
     def __init__(self, vocab_size):        
         super(rnn_reco_model, self).__init__()        
-        self.song_emb   = tf.keras.layers.Embedding(vocab_size, SONG_EMB_DIM, mask_zero=True, name="embedding_layer")            
+        self.song_emb = tf.keras.layers.Embedding(vocab_size, 
+                                                  SONG_EMB_DIM, 
+                                                  mask_zero=True, 
+                                                  name="song_embedding_layer")               
+        
+        if USE_TIME_BUCKETS:
+            self.time_bucket_emb = tf.keras.layers.Embedding(TIME_BUCKET_VOCAB_SIZE, 
+                                                             TIME_BUCKET_EMB_DIM, 
+                                                             mask_zero=True, 
+                                                             name="time_bucket_embedding_layer")
         
         self.lstm   = tf.keras.layers.LSTM(LSTM_DIM, return_state=True, name="rnn_layer")    
         self.dense = customLinear(in_units=LSTM_DIM, out_units=vocab_size)
         self.dense.build((LSTM_DIM, ))
           
     def call(self, inp, initial_state=None, training=True):          
-        song_emb = self.song_emb(inp)
-        mask = self.song_emb.compute_mask(inp)
-            
-        lstm, state_h, state_c = self.lstm(song_emb, mask=mask, initial_state=initial_state)
+        song_emb_inp = inp[0]
+        
+        song_emb = self.song_emb(song_emb_inp)                           # (bs, MAX_LEN, SONG_EMB_DIM)
+        song_emb_mask = self.song_emb.compute_mask(song_emb_inp)         # (bs, MAX_LEN)
+
+        lstm_inp = song_emb                                              # (bs, MAX_LEN, SONG_EMB_DIM)
+        lstm_inp_mask = song_emb_mask                                    # (bs, MAX_LEN)
+                
+        if USE_TIME_BUCKETS:
+            time_bucket_emb_inp = inp[1]
+            time_bucket_emb = self.time_bucket_emb(time_bucket_emb_inp)  # (bs, MAX_LEN, TIME_BUCKET_EMB_DIM)            
+            lstm_inp = tf.concat([lstm_inp, time_bucket_emb], axis = -1) # (bs, MAX_LEN, SONG_EMB_DIM+TIME_BUCKET_EMB_DIM)
+                                    
+        lstm, state_h, state_c = self.lstm(lstm_inp, mask=song_emb_mask, initial_state=initial_state)
         
         if not training:
             logits = self.dense(lstm)
