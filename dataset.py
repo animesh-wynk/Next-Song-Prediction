@@ -18,12 +18,12 @@ class wynk_sessions_dataset():
         self._map_song2info()
         
         
-    def _make_batch_full(self, tuple_of_batches):
-        num_rows_to_fill = MAX_REPLICAS_DESIRED - tuple_of_batches[0].shape[0]        
-        rep_arrays = [np.array(b[:1, :]) if len(b.shape) > 1 else np.array(b[:1]) for b in tuple_of_batches]
+    def _make_batch_full(self, list_of_batches):
+        num_rows_to_fill = MAX_REPLICAS_DESIRED - list_of_batches[0].shape[0]        
+        rep_arrays = [np.array(b[:1, :]) if len(b.shape) > 1 else np.array(b[:1]) for b in list_of_batches]
         rep_arrays = [np.concatenate([rep for i in range(num_rows_to_fill)], axis = 0) for rep in rep_arrays]        
-        tuple_of_batches_filled = (np.concatenate((tuple_of_batches[i], rep_arrays[i]), axis = 0) for i in range(len(tuple_of_batches)))
-        return tuple_of_batches_filled
+        list_of_batches_filled = [np.concatenate((list_of_batches[i], rep_arrays[i]), axis = 0) for i in range(len(list_of_batches))]
+        return list_of_batches_filled
         
         
     def preprocessed_data_generator(self):
@@ -33,13 +33,20 @@ class wynk_sessions_dataset():
             chunk_np = chunk.to_numpy() # (bs, 2*(max_len+1)=23)
 
             song_emb_id_x_batch = chunk_np[:, 1:1+MAX_LEN] # (bs, max_len=10)
-            song_emb_id_y_batch = chunk_np[:, 1+MAX_LEN]   # (bs, )
+            song_emb_id_y_batch = chunk_np[:, 1+MAX_LEN]   # (bs, )     
+
+            preprocessed_data = [song_emb_id_x_batch, song_emb_id_y_batch]
             
+            if USE_TIME_BUCKETS:
+                time_bucket_emb_id_x_batch = chunk_np[:, 1+MAX_LEN+1:1+MAX_LEN+1+MAX_LEN] # (bs, max_len=10)
+                time_bucket_emb_id_y_batch = chunk_np[:, 1+MAX_LEN+1+MAX_LEN]   # (bs, )
+                preprocessed_data += [time_bucket_emb_id_x_batch, time_bucket_emb_id_y_batch]
+                    
             # Filling in the batches to have MAX_REPLICAS_DESIRED data points so that it could run in a multi-GPU setting
-            if song_emb_id_x_batch.shape[0] < MAX_REPLICAS_DESIRED:
-                song_emb_id_x_batch, song_emb_id_y_batch = self._make_batch_full((song_emb_id_x_batch, song_emb_id_y_batch))
+            if preprocessed_data[0].shape[0] < MAX_REPLICAS_DESIRED:
+                preprocessed_data = self._make_batch_full(preprocessed_data)
             
-            yield song_emb_id_x_batch, song_emb_id_y_batch
+            yield tuple(d for d in preprocessed_data) 
                 
     def _map_song2info(self):
         print("\n>>>>> Mapping song2info... >>>>>")
