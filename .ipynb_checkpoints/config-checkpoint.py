@@ -19,6 +19,7 @@ def get_timestamp():
     return timestamp
 
 REDIRECT_STD_OUT_TO_TXT_FILE = True
+USE_TIME_BUCKETS = True
 
 # DATA
 DATA_BASE_PATH = "s3://wynk-ml-workspace/projects/_temp/rnn_recommendation/with_metadata/day=2021-05-16to2021-05-22/"
