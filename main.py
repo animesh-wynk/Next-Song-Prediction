@@ -84,17 +84,16 @@ def train_step(inputs):
     
     if USE_TIME_BUCKETS:
         song_emb_id_x_batch, song_emb_id_y_batch, time_bucket_emb_id_x_batch, time_bucket_emb_id_y_batch = inputs
-        x_batch = [song_emb_id_x_batch, time_bucket_emb_id_x_batch]
     else:
         song_emb_id_x_batch, song_emb_id_y_batch = inputs
-        x_batch = [song_emb_id_x_batch]
-
-    y_batch = song_emb_id_y_batch
+        time_bucket_emb_id_x_batch = None
     
     with tf.GradientTape() as tape:
-        lstm = model(x_batch, training=True)
+        lstm = model(song_emb_inp=song_emb_id_x_batch,
+                     time_bucket_emb_inp=time_bucket_emb_id_x_batch,
+                     training=True)
         
-        loss = compute_loss(model, y_batch, lstm)   
+        loss = compute_loss(model, song_emb_id_y_batch, lstm)   
         # loss seems to be the average loss for all the data points in a global batch   
         #tf.print('\nloss: ', loss)
         

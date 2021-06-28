@@ -56,17 +56,16 @@ class rnn_reco_model(tf.keras.Model):
         self.dense = customLinear(in_units=LSTM_DIM, out_units=vocab_size)
         self.dense.build((LSTM_DIM, ))
           
-    def call(self, inp, initial_state=None, training=True):          
-        song_emb_inp = inp[0]
-        
+    
+    
+    def call(self, song_emb_inp, time_bucket_emb_inp, initial_state=None, training=True):   
         song_emb = self.song_emb(song_emb_inp)                           # (bs, MAX_LEN, SONG_EMB_DIM)
         song_emb_mask = self.song_emb.compute_mask(song_emb_inp)         # (bs, MAX_LEN)
 
         lstm_inp = song_emb                                              # (bs, MAX_LEN, SONG_EMB_DIM)
         lstm_inp_mask = song_emb_mask                                    # (bs, MAX_LEN)
                 
-        if USE_TIME_BUCKETS:
-            time_bucket_emb_inp = inp[1]
+        if (time_bucket_emb_inp is not None) and USE_TIME_BUCKETS:
             time_bucket_emb = self.time_bucket_emb(time_bucket_emb_inp)  # (bs, MAX_LEN, TIME_BUCKET_EMB_DIM)            
             lstm_inp = tf.concat([lstm_inp, time_bucket_emb], axis = -1) # (bs, MAX_LEN, SONG_EMB_DIM+TIME_BUCKET_EMB_DIM)
                                     
