@@ -81,7 +81,16 @@ def distributed_train_step(dataset_inputs):
     return strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None)
 
 def train_step(inputs):
-    x_batch, y_batch = inputs
+    
+    if USE_TIME_BUCKETS:
+        song_emb_id_x_batch, song_emb_id_y_batch, time_bucket_emb_id_x_batch, time_bucket_emb_id_y_batch = inputs
+        x_batch = [song_emb_id_x_batch, time_bucket_emb_id_x_batch]
+    else:
+        song_emb_id_x_batch, song_emb_id_y_batch = inputs
+        x_batch = [song_emb_id_x_batch]
+
+    y_batch = song_emb_id_y_batch
+    
     with tf.GradientTape() as tape:
         lstm = model(x_batch, training=True)
         
@@ -95,6 +104,12 @@ def train_step(inputs):
     #train_accuracy.update_state(labels, predictions)
     return loss    
 
+train_gen_output_types = (tf.dtypes.int64, tf.dtypes.int64)
+train_gen_output_shapes = ((None, MAX_LEN), (None,))
+if USE_TIME_BUCKETS:
+    train_gen_output_types += (tf.dtypes.uint8, tf.dtypes.uint8)
+    train_gen_output_shapes+= ((None, MAX_LEN), (None,))
+    
 print("- - - TRAIN - - - ")  
 best_metrics_dict = {'best_sps': -1,
                 'best_recall': -1,
@@ -111,10 +126,9 @@ for e in range(START_EPOCH, END_EPOCH):
     # Convert python generator into tf data generator    
     train_gen = tf.data.Dataset.from_generator(
                                 train_gen,
-                                output_types=(tf.dtypes.int64, tf.dtypes.int64),
-                                output_shapes=((None, MAX_LEN), (None,)) 
-                                )
-    
+                                output_types=train_gen_output_types,
+                                output_shapes=train_gen_output_shapes 
+                                )    
     # Prefetch data
     train_gen = train_gen.prefetch(tf.data.experimental.AUTOTUNE)
     
