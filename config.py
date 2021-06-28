@@ -111,7 +111,7 @@ WRITE_SUMMARY = True                                                    # whethe
 
 NUM_TEST_SAMPLES_QUANTITATIVE = 10_000                                   # number of testing examples to be used for evaluating all the metrics 
 
-NAME = f"exp_rnn_7_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"
+NAME = f"exp_withtimebuckets_rnn_7_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"
 
 SUMMARY_DIR = os.path.join("summary", "summary_"+NAME )
 METRICS_SUMMARY_DIR = os.path.join("metrics", "metrics_summary_"+ NAME)

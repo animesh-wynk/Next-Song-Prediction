@@ -40,7 +40,7 @@ else:
 
 ### Define model and opt  
 with strategy.scope():
-    model = rnn_reco_model(dataset.vocab_size, SONG_EMB_DIM, LSTM_DIM)
+    model = rnn_reco_model(dataset.vocab_size)
     
     if LOAD_MODEL:
         model.build(input_shape=(None, MAX_LEN))

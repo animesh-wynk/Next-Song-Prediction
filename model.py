@@ -39,19 +39,19 @@ class customLinear(Layer):
         return tf.matmul(inputs, self.w) + self.b    
       
 class rnn_reco_model(tf.keras.Model):
-    def __init__(self, vocab_size, song_emb_dim, lstm_dim): 
+    def __init__(self, vocab_size):        
         super(rnn_reco_model, self).__init__()        
-        self.emb   = tf.keras.layers.Embedding(vocab_size, song_emb_dim, mask_zero=True, name="embedding_layer")            
+        self.song_emb   = tf.keras.layers.Embedding(vocab_size, SONG_EMB_DIM, mask_zero=True, name="embedding_layer")            
         
-        self.lstm   = tf.keras.layers.LSTM(lstm_dim, return_state=True, name="rnn_layer")    
-        self.dense = customLinear(in_units=lstm_dim, out_units=vocab_size)
-        self.dense.build((lstm_dim, ))
+        self.lstm   = tf.keras.layers.LSTM(LSTM_DIM, return_state=True, name="rnn_layer")    
+        self.dense = customLinear(in_units=LSTM_DIM, out_units=vocab_size)
+        self.dense.build((LSTM_DIM, ))
           
     def call(self, inp, initial_state=None, training=True):          
-        emb = self.emb(inp)
-        mask = self.emb.compute_mask(inp)
+        song_emb = self.song_emb(inp)
+        mask = self.song_emb.compute_mask(inp)
             
-        lstm, state_h, state_c = self.lstm(emb, mask=mask, initial_state=initial_state)
+        lstm, state_h, state_c = self.lstm(song_emb, mask=mask, initial_state=initial_state)
         
         if not training:
             logits = self.dense(lstm)
@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     dataset = wynk_sessions_dataset(TRAIN_DATA_PATH, TRAIN_SONGS_INFO_PATH)
     
-    model = rnn_reco_model(dataset.vocab_size, SONG_EMB_DIM, LSTM_DIM)
+    model = rnn_reco_model(dataset.vocab_size)
     
     
     q("model ok")
