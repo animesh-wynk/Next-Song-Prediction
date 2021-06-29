@@ -7,16 +7,14 @@ import tensorflow as tf
 from config import *    
 
 class wynk_sessions_dataset():
-    def __init__(self, train_data_path, train_songs_info_path):
-        self.train_data_path = train_data_path
-        self.train_songs_info_path = train_songs_info_path
-
+    def __init__(self):
+        
         # Build vocab and make all necessary dictionaries
         self._build_vocab()
         
         # Make song2info dictionary
         self._map_song2info()
-        
+        TRAIN_DATA_PATH, TRAIN_SONGS_INFO_PATH
         
     def _make_batch_full(self, list_of_batches):
         num_rows_to_fill = MAX_REPLICAS_DESIRED - list_of_batches[0].shape[0]        
@@ -27,7 +25,7 @@ class wynk_sessions_dataset():
         
         
     def preprocessed_data_generator(self):
-        _train_data_path = self.train_data_path
+        _train_data_path = TRAIN_DATA_PATH
         print(f"using {_train_data_path} in preprocessed_data_generator()")
         for chunk in pd.read_csv(_train_data_path, chunksize=BATCH_SIZE):
             chunk_np = chunk.to_numpy() # (bs, 2*(max_len+1)=23)
@@ -101,7 +99,8 @@ class wynk_sessions_dataset():
             print("\nMaking build_vocab_dict...")
             
             # Read song_info file as a pandas dataframe
-            song_info_df = pd.read_parquet(self.train_songs_info_path, columns=["song_id", "song_embedding_id", "frequency"])
+            song_info_df = pd.read_parquet(TRAIN_SONGS_INFO_PATH, 
+                                           columns=["song_id", "song_embedding_id", "frequency"])
 
             print("song_info_df.shape: ", song_info_df.shape) # (149_345, 2)
             print("song_info_df.columns: ", song_info_df.columns) # song_id, frequency
@@ -150,7 +149,7 @@ class wynk_sessions_dataset():
 
 if __name__ == "__main__":
 
-    dataset = wynk_sessions_dataset(TRAIN_DATA_PATH, TRAIN_SONGS_INFO_PATH)    
+    dataset = wynk_sessions_dataset()    
     
     data_gen = dataset.preprocessed_data_generator()
     print(type(data_gen))
