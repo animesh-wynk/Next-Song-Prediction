@@ -188,7 +188,7 @@ def compute_and_store_metrics(model, dataset, count_dict, best_metrics_dict, tes
         SAVE_MODEL = True    
     
     # Qualitative results
-    if QUALITATIVE_RESULTS_ON_HANDPICKED_SONGS:
+    if QUALITATIVE_RESULTS_ON_HANDPICKED_SONGS and (not USE_TIME_BUCKETS):
         # Qualitative results on handpicked songs
     
         write_name = os.path.join(QUALITATIVE_RESULTS_DIR, f"epoch_{str(count_dict['epoch']).zfill(2)}_batch_{str(count_dict['total_batches']).zfill(8)}.txt")
@@ -208,7 +208,7 @@ def get_top_k_recommendations(model, dataset, k=K):
     recommendation_GT     -> list of items(not IDs)
     '''
 
-    print(f'\nGenerating Top-K Recommendations on {NUM_TEST_SAMPLES_QUANTITATIVE} Test Samples ...')
+    print(f"\nGenerating Top-K Recommendations on {NUM_TEST_SAMPLES_QUANTITATIVE} Test Samples ...")
         
     top_k_recommendations = []
     next_items = []
@@ -220,34 +220,41 @@ def get_top_k_recommendations(model, dataset, k=K):
             print(f"{str(chunk_idx).zfill(len(str(NUM_TEST_SAMPLES_QUANTITATIVE)))}/{NUM_TEST_SAMPLES_QUANTITATIVE}", end="\r" )
         
         chunk_array = np.squeeze(chunk.to_numpy())
-
-        user_id = chunk_array[0]
-        test_seq_len = chunk_array[1]
         
-        song_id_list = chunk_array[2:2+MAX_TEST_SEQ_LEN][-test_seq_len:]
-        cut = len(song_id_list)//2
+        user_id = chunk_array[0]
+        test_seq_len = chunk_array[1]    
+        
+        song_id_array = chunk_array[2:2+MAX_TEST_SEQ_LEN][-test_seq_len:] # Removing padding
+        cut = len(song_id_array)//2
+        
+        time_bucket_id_array = chunk_array[2+MAX_TEST_SEQ_LEN:2+MAX_TEST_SEQ_LEN+MAX_TEST_SEQ_LEN][-test_seq_len:] # Removing padding
         
         # Discarding the song_id which are not present in the vocab
-        song_id_list = [song_id for song_id in song_id_list if song_id in dataset.idx2item.keys()]          
-        if len(song_id_list) < 2: continue        
-    
         # TODO: HANDLE OOV    
-
-        xs = song_id_list[:cut] # ignoring items that are not present in the vocab (train set)
-        xs_batch = np.array([xs])
-        
-        probs, _, _ = model(xs_batch, training=False)#.numpy()[0]
+        song_id_array = [song_id for song_id in song_id_array if song_id in dataset.idx2item.keys()]          
+        if len(song_id_array) < 2: continue        
+    
+        song_emb_id_x_batch = np.expand_dims(song_id_array[:cut], axis=0)
+        if USE_TIME_BUCKETS:
+            time_bucket_emb_id_x_batch = np.expand_dims(time_bucket_id_array[:cut], axis=0)
+        else:
+            time_bucket_emb_id_x_batch=None
+            
+        probs, _, _ = model(song_emb_inp=song_emb_id_x_batch,
+                            time_bucket_emb_inp=time_bucket_emb_id_x_batch,
+                            training=False)
+    
         probs = probs.numpy()[0] # np array (vocab_size)
 
-        probs[xs] = 0        
+        probs[song_id_array[:cut]] = 0        
         
         top_k = np.argsort(-probs)[:k]
         top_k_recommendations.append(top_k)
         
-        next_item = song_id_list[cut]
+        next_item = song_id_array[cut]
         next_items.append(next_item)        
 
-        gt = song_id_list[cut:]
+        gt = song_id_array[cut:]
         recommendations_GT.append(gt)
     
     return top_k_recommendations, next_items, recommendations_GT
@@ -300,30 +307,30 @@ def show_recommended_song_info(write_name, inp, dataset, recommendations, gt=Non
                 if item in dataset.song2info:
                     info_list.append(dataset.song2info[item])
                 else:
-                    info_list.append(f'titleNotFoundForIdx_{idx}')                
+                    info_list.append(f"titleNotFoundForIdx_{idx}")                
             return info_list
         
         def get_print_str_list(info_list, name):            
             print_str_list = [] 
-            print_str_list.append(f'\n{name}\n')            
+            print_str_list.append(f"\n{name}\n")            
             for i in info_list:
-                print_str_list.append(i+'\n')
+                print_str_list.append(i+"\n")
             return print_str_list
 
         write_str_list = [] 
-        write_str_list.extend(['\n- - - - - - - GENERATING RECOMMENDATIONS - - - - - - -\n'])
+        write_str_list.extend(["\n- - - - - - - GENERATING RECOMMENDATIONS - - - - - - -\n"])
 
         inp_info   = get_info_from_item(inp)
-        inp_print_str_list = get_print_str_list(inp_info, 'input:')
+        inp_print_str_list = get_print_str_list(inp_info, "input: ")
         write_str_list.extend(inp_print_str_list)
 
         recom_info = get_info_from_item(recommendations)
-        recom_print_str_list = get_print_str_list(recom_info, 'recommendations:')
+        recom_print_str_list = get_print_str_list(recom_info, "recommendations: ")
         write_str_list.extend(recom_print_str_list)
 
         if gt is not None:
             gt_info = get_info_from_item(gt[:K])
-            gt_print_str_list = get_print_str_list(gt_info, 'ground truth:')
+            gt_print_str_list = get_print_str_list(gt_info, "ground truth: ")
             write_str_list.extend(gt_print_str_list)
 
         if PRINT_QUALITATIVE_RESULTS:
