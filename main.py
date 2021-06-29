@@ -23,7 +23,7 @@ strategy = STRATEGY
 print(f"Number of devices: {strategy.num_replicas_in_sync}")
 
 ### Initialize dataset class object
-dataset = wynk_sessions_dataset(TRAIN_DATA_PATH, TRAIN_SONGS_INFO_PATH)
+dataset = wynk_sessions_dataset()
 
 if WRITE_SUMMARY:
     # SUMMARY_DIR is the path of the directory where the tensorboard SummaryWriter files are written
