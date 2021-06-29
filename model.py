@@ -68,7 +68,7 @@ class rnn_reco_model(tf.keras.Model):
         if (time_bucket_emb_inp is not None) and USE_TIME_BUCKETS:
             time_bucket_emb = self.time_bucket_emb(time_bucket_emb_inp)  # (bs, MAX_LEN, TIME_BUCKET_EMB_DIM)            
             lstm_inp = tf.concat([lstm_inp, time_bucket_emb], axis = -1) # (bs, MAX_LEN, SONG_EMB_DIM+TIME_BUCKET_EMB_DIM)
-                                    
+            
         lstm, state_h, state_c = self.lstm(lstm_inp, mask=song_emb_mask, initial_state=initial_state)
         
         if not training:
