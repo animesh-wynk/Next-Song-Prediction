@@ -137,14 +137,13 @@ for e in range(START_EPOCH, END_EPOCH):
     total_loss = 0
     tick = time.time()
     for batch_idx, batch in enumerate(train_dist_dataset): 
-        
-        """
+
         # LR decay
-        if (batch_num!=0) and (batch_num%50_000==0):
-            old_lr = optimizer.learning_rate.numpy()
-            optimizer.learning_rate = optimizer.learning_rate.numpy()*0.95
-            print(f"lr changed from {old_lr} to {optimizer.learning_rate.numpy()}")
-        """ 
+        if LR_DECAY_RATE:
+            if (batch_idx+1)%LR_DECAY_EVERY_N_BATCH==0:
+                old_lr = optimizer.learning_rate.numpy()
+                optimizer.learning_rate = optimizer.learning_rate.numpy()*LR_DECAY_RATE
+                print(f"LR changed from {old_lr} to {optimizer.learning_rate.numpy()}")
             
         if not REDIRECT_STD_OUT_TO_TXT_FILE:print(f"{str(batch_idx).zfill(6)}", end="\r")
 
