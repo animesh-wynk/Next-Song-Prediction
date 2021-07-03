@@ -279,7 +279,7 @@ def visualize_recommendations_in_sequence(model, write_name, dataset, input_idx,
 
     for t in range(num_recommendation_timesteps):
         
-        probs, state_h, state_c = model(song_emb_inp=song_emb_id_x_batch,
+        probs, state_h, state_c = model(song_emb_inp=inp,
                                         time_bucket_emb_inp=None,
                                         training=False, 
                                         initial_state=initial_state) # probs (1, num_items)
