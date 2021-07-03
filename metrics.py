@@ -278,7 +278,11 @@ def visualize_recommendations_in_sequence(model, write_name, dataset, input_idx,
     initial_state = None #[state_h, state_c]
 
     for t in range(num_recommendation_timesteps):
-        probs, state_h, state_c = model(inp, training=False, initial_state=initial_state) # probs (1, num_items)
+        
+        probs, state_h, state_c = model(song_emb_inp=song_emb_id_x_batch,
+                                        time_bucket_emb_inp=None,
+                                        training=False, 
+                                        initial_state=initial_state) # probs (1, num_items)
 
         probs = probs*(1-exclude)             # probs (1, vocab_size)
         pred = tf.math.argmax(probs, axis=-1) # (1, )
