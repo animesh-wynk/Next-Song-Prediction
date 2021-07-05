@@ -4,16 +4,19 @@ import pdb
 from config import *
 
 class customLinear(Layer):
-    def __init__(self, in_units, out_units):
-        super(customLinear, self).__init__()
+    def __init__(self, in_units, out_units, name=None):
+        super(customLinear, self).__init__(name=name)
         w_init = tf.random_normal_initializer()
         self.w = tf.Variable(
             initial_value=w_init(shape=(in_units, out_units), dtype="float32"),
-            trainable=True,)
+            trainable=True, 
+            name=f"{name}/weights")
         
         b_init = tf.zeros_initializer()
         self.b = tf.Variable(
-            initial_value=b_init(shape=(out_units,), dtype="float32"), trainable=True)        
+            initial_value=b_init(shape=(out_units,), dtype="float32"), 
+            trainable=True, 
+            name=f"{name}/bias")        
 
         self.w_regularizer = tf.keras.regularizers.l2(1e-5) 
 
@@ -52,11 +55,20 @@ class rnn_reco_model(tf.keras.Model):
                                                              mask_zero=True, 
                                                              name="time_bucket_embedding_layer")
         
-        self.lstm   = tf.keras.layers.LSTM(LSTM_DIM, return_state=True, name="rnn_layer")    
-        self.dense = customLinear(in_units=LSTM_DIM, out_units=vocab_size)
+        if USE_ATTENTION:
+            self.lstm   = tf.keras.layers.LSTM(LSTM_DIM, 
+                                               return_state=True, 
+                                               return_sequences=True, 
+                                               name="rnn_layer")            
+            self.attention = tf.keras.layers.Dense(1, name="attention_layer")
+        else:
+            self.lstm   = tf.keras.layers.LSTM(LSTM_DIM, 
+                                               return_state=True, 
+                                               name="rnn_layer")    
+            
+        self.dense = customLinear(in_units=LSTM_DIM, out_units=vocab_size, name=f"{self.name}/last_layer")
         self.dense.build((LSTM_DIM, ))
           
-    
     
     def call(self, song_emb_inp, time_bucket_emb_inp, initial_state=None, training=True):   
         song_emb = self.song_emb(song_emb_inp)                           # (bs, MAX_LEN, SONG_EMB_DIM)
@@ -69,7 +81,20 @@ class rnn_reco_model(tf.keras.Model):
             time_bucket_emb = self.time_bucket_emb(time_bucket_emb_inp)  # (bs, MAX_LEN, TIME_BUCKET_EMB_DIM)            
             lstm_inp = tf.concat([lstm_inp, time_bucket_emb], axis = -1) # (bs, MAX_LEN, SONG_EMB_DIM+TIME_BUCKET_EMB_DIM)
             
-        lstm, state_h, state_c = self.lstm(lstm_inp, mask=song_emb_mask, initial_state=initial_state)
+        lstm, state_h, state_c = self.lstm(lstm_inp, mask=song_emb_mask, initial_state=initial_state) 
+        # lstm.shape: (bs, MAX_LEN, LSTM_DIM) if USE_ATTENTION else (bs, LSTM_DIM)
+        
+        if USE_ATTENTION:
+            attn_weights = self.attention(lstm) # (bs, MAX_LEN, 1)
+            attn_weights_squeezed = tf.squeeze(attn_weights, axis=-1) # (bs, MAX_LEN)
+            attn_weights_squeezed_masked = tf.math.multiply(attn_weights_squeezed, tf.cast(lstm_inp_mask, tf.float32)) # (bs, MAX_LEN)
+            attn_weights_softmaxed = tf.keras.layers.Softmax(axis=-1)(attn_weights_squeezed_masked) # (bs, MAX_LEN)
+            attn_weights_softmaxed_repeated = tf.keras.layers.RepeatVector(LSTM_DIM)(attn_weights_softmaxed) # (bs, LSTM_DIM, MAX_LEN)                     
+            attn_weights_softmaxed_repeated_permuted = tf.keras.layers.Permute([2,1])(attn_weights_softmaxed_repeated) # (bs, MAX_LEN, LSTM_DIM)           
+            # weighted_lstm = tf.keras.layers.Multiply()([lstm, attn_weights_softmaxed_repeated_permuted]) # (bs, MAX_LEN, LSTM_DIM) also works fine       
+            weighted_lstm = tf.math.multiply(lstm, attn_weights_softmaxed_repeated_permuted) # (bs, MAX_LEN, LSTM_DIM)            
+            weighted_sum_lstm = tf.math.reduce_sum(weighted_lstm, axis=1, keepdims=False) # (bs, LSTM_DIM)
+            lstm = weighted_sum_lstm
         
         if not training:
             logits = self.dense(lstm)
