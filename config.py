@@ -20,6 +20,7 @@ def get_timestamp():
 
 REDIRECT_STD_OUT_TO_TXT_FILE = True
 USE_TIME_BUCKETS = False
+USE_ATTENTION = True
 
 LR_DECAY_RATE = 0.50 # Set None if LR decay is not to be employed
 LR_DECAY_EVERY_N_BATCH = 120_000
