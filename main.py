@@ -104,10 +104,17 @@ def train_step(inputs):
     return loss    
 
 train_gen_output_types = (tf.dtypes.int64, tf.dtypes.int64)
-train_gen_output_shapes = ((None, MAX_LEN), (None,))
+if USE_ENCODER_DECODER_ARCH:
+    train_gen_output_shapes = ((None, MAX_LEN), (None, MAX_LEN))
+else:
+    train_gen_output_shapes = ((None, MAX_LEN), (None,))
+
 if USE_TIME_BUCKETS:
     train_gen_output_types += (tf.dtypes.uint8, tf.dtypes.uint8)
-    train_gen_output_shapes+= ((None, MAX_LEN), (None,))
+    if USE_ENCODER_DECODER_ARCH:
+        train_gen_output_shapes+= ((None, MAX_LEN), (None, MAX_LEN))
+    else:
+        train_gen_output_shapes+= ((None, MAX_LEN), (None,))
     
 print("- - - TRAIN - - - ")  
 best_metrics_dict = {'best_sps': -1,
