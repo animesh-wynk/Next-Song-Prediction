@@ -14,7 +14,28 @@ class wynk_sessions_dataset():
         
         # Make song2info dictionary
         self._map_song2info()
-        TRAIN_DATA_PATH, TRAIN_SONGS_INFO_PATH
+
+        ###
+        self.song_emb_id_x_batch_start_idx = 1
+        self.song_emb_id_x_batch_end_idx   = self.song_emb_id_x_batch_start_idx + MAX_LEN
+
+        if USE_TIME_BUCKETS:
+            self.time_bucket_emb_id_x_batch_start_idx = 1 + MAX_LEN + 1
+            self.time_bucket_emb_id_x_batch_end_idx = self.time_bucket_emb_id_x_batch_start_idx + MAX_LEN            
+            
+        if USE_ENCODER_DECODER_ARCH:
+            self.song_emb_id_y_batch_start_idx = 1 + self.song_emb_id_x_batch_start_idx
+            self.song_emb_id_y_batch_end_idx   = 1 + self.song_emb_id_x_batch_end_idx                
+            if USE_TIME_BUCKETS:
+                self.time_bucket_emb_id_y_batch_start_idx = 1 + self.time_bucket_emb_id_x_batch_start_idx
+                self.time_bucket_emb_id_y_batch_end_idx = 1 + self.time_bucket_emb_id_x_batch_end_idx                   
+        else:
+            self.song_emb_id_y_batch_start_idx = self.song_emb_id_x_batch_end_idx
+            self.song_emb_id_y_batch_end_idx   = self.song_emb_id_y_batch_start_idx + 1                
+            if USE_TIME_BUCKETS:
+                self.time_bucket_emb_id_y_batch_start_idx = self.time_bucket_emb_id_x_batch_end_idx
+                self.time_bucket_emb_id_y_batch_end_idx = self.time_bucket_emb_id_y_batch_start_idx + 1
+
         
     def _make_batch_full(self, list_of_batches):
         num_rows_to_fill = MAX_REPLICAS_DESIRED - list_of_batches[0].shape[0]        
@@ -29,21 +50,25 @@ class wynk_sessions_dataset():
         print(f"using {_train_data_path} in preprocessed_data_generator()")
         for chunk in pd.read_csv(_train_data_path, chunksize=BATCH_SIZE):
             chunk_np = chunk.to_numpy() # (bs, 2*(max_len+1)=23)
-
-            song_emb_id_x_batch = chunk_np[:, 1:1+MAX_LEN] # (bs, max_len=10)
-            song_emb_id_y_batch = chunk_np[:, 1+MAX_LEN]   # (bs, )     
+            
+            song_emb_id_x_batch = chunk_np[:, self.song_emb_id_x_batch_start_idx: self.song_emb_id_x_batch_end_idx] # (bs, max_len=10)
+            song_emb_id_y_batch = chunk_np[:, self.song_emb_id_y_batch_start_idx: self.song_emb_id_y_batch_end_idx] # (bs, max_len)     
 
             preprocessed_data = [song_emb_id_x_batch, song_emb_id_y_batch]
             
-            if USE_TIME_BUCKETS:
-                time_bucket_emb_id_x_batch = chunk_np[:, 1+MAX_LEN+1:1+MAX_LEN+1+MAX_LEN] # (bs, max_len=10)
-                time_bucket_emb_id_y_batch = chunk_np[:, 1+MAX_LEN+1+MAX_LEN]   # (bs, )
+            if USE_TIME_BUCKETS:                
+                time_bucket_emb_id_x_batch = chunk_np[:, self.time_bucket_emb_id_x_batch_start_idx: self.time_bucket_emb_id_x_batch_end_idx] # (bs, max_len=10)
+                time_bucket_emb_id_y_batch = chunk_np[:, self.time_bucket_emb_id_y_batch_start_idx: self.time_bucket_emb_id_y_batch_end_idx] # (bs, max_len)                
                 preprocessed_data += [time_bucket_emb_id_x_batch, time_bucket_emb_id_y_batch]
                     
+            
             # Filling in the batches to have MAX_REPLICAS_DESIRED data points so that it could run in a multi-GPU setting
             if preprocessed_data[0].shape[0] < MAX_REPLICAS_DESIRED:
                 preprocessed_data = self._make_batch_full(preprocessed_data)
-            
+                
+            if not USE_ENCODER_DECODER_ARCH:
+                preprocessed_data[1] = np.squeeze(preprocessed_data[1], axis = -1) # song_emb_id_y_batch # (bs, )
+                preprocessed_data[3] = np.squeeze(preprocessed_data[3], axis = -1) # time_bucket_emb_id_y_batch # (bs, )                  
             yield tuple(d for d in preprocessed_data) 
                 
     def _map_song2info(self):
