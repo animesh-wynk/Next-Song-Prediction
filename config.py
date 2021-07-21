@@ -25,30 +25,31 @@ LR_DECAY_RATE = 0.50 # Set None if LR decay is not to be employed
 LR_DECAY_EVERY_N_BATCH = 120_000
 
 # DATA
-DATA_BASE_PATH = "s3://wynk-ml-workspace/projects/_temp/rnn_recommendation/with_metadata/day=2021-05-16to2021-05-22/"
+DATA_BASE_PATH = "s3://wynk-ml-workspace/projects/_temp/rnn_recommendation/dataset_5/day=2021-06-01to2021-07-04/"
 TRAIN_DATA_DIR_PATH = "train/"
-VAL_DATA_DIR_PATH = "val/"
-TEST_DATA_DIR_PATH = "test/"
+VAL_DATA_DIR_PATH = "val_test/"
+TEST_DATA_DIR_PATH = "val_test/"
 
 # TRAIN DATA
 TRAIN_DATA_PATH = (DATA_BASE_PATH + TRAIN_DATA_DIR_PATH + 
-                   "SessionizedSongDataPreprocessedPopBias_4_concat_seq_csv/part-00000-5af881ad-6a26-4315-ad13-754b610a7570-c000.csv")
+                   "_09_train_data_split_and_pad_seq_csv/part-00000-8de395ed-92ba-414a-abe5-76bbaf6de444-c000.csv")
 
 # TRAIN_DATA_PATH = "s3://wynk-ml-workspace/projects/_temp/rnn_recommendation/with_metadata/day=2021-05-16to2021-05-22/debug/part-00000-2c072854-c833-48db-bdd6-52cf1c229755-c000.csv"
 
 
 TRAIN_SONGS_INFO_PATH = (DATA_BASE_PATH + TRAIN_DATA_DIR_PATH + 
-                         "song2info/part-00000-47cf8333-7ca4-4c7e-9728-060ce46eb410-c000.snappy.parquet")   
+                         "_10_train_data_song2info/part-00000-068ee48a-dc3e-4c95-a239-bcaf20b81820-c000.snappy.parquet")   
+
 TRAIN_USERS_INFO_PATH = (DATA_BASE_PATH + TRAIN_DATA_DIR_PATH + 
-                         "user_id_emb_df_path/part-00000-32302600-a0f3-424d-98f2-26f6677dfdf3-c000.snappy.parquet")
+                         "_06_train_data_user_emb_ids/part-00000-fd09ed94-da59-4b23-b562-a7476dd5014e-c000.snappy.parquet")
 
 # VAL DATA (data from same day)
 VAL_DATA_PATH = (DATA_BASE_PATH + VAL_DATA_DIR_PATH + 
-                   "userSessionizedSongDataPreprocessed_indexed_user_id_seq_2_csv_path/part-00000-fd26b97f-d1aa-4820-86c5-990d582b4522-c000.csv")
+                   "_04_val_data_path/part-00000-9c8dc6db-53da-458f-a1aa-1869a9938a10-c000.csv")
 
 # TEST DATA (data from same day)
 TEST_DATA_PATH = (DATA_BASE_PATH + TEST_DATA_DIR_PATH + 
-                   "userSessionizedSongDataPreprocessed_indexed_user_id_seq_2_csv_path/part-00000-e30612e2-fbe5-4993-b94b-d5a0d14b5f7f-c000.csv") 
+                   "_04_test_data_path/part-00000-7232f3ba-b3fd-4a8f-8162-1ec634f18fdf-c000.csv") 
 
 # OTHER DATA PATHS
 QUALITATIVE_TEST_DATA_PATH = "qualitative_test_data/"
@@ -88,17 +89,17 @@ BATCH_SIZE = BATCH_SIZE_PER_REPLICA * NUM_REPLICAS # GLOBAL_BATCH_SIZE
 ### MODEL ARCHITECTURE CONFIG
 LSTM_DIM = 1024                      # output size of the rnn layer
 SONG_EMB_DIM = 64
-TIME_BUCKET_EMB_DIM = 4
+TIME_BUCKET_EMB_DIM = 8
 USER_EMB_DIM = 64
-TIME_BUCKET_VOCAB_SIZE = 228 + 1 # 228 buckets of 5 mins + padding
+TIME_BUCKET_VOCAB_SIZE = 12 + 1 # 228 buckets of 5 mins + padding
 MAX_LEN = 10                         # maximum length of the input sequece to be fed inside the model while training 
-MAX_TEST_SEQ_LEN = 228
+MAX_TEST_SEQ_LEN = 60
 
 SONG_PAD_TOKEN = "<pad>"
-SONG_UNK_TOKEN = "<unk>"
+# SONG_UNK_TOKEN = "<unk>"
 
 SONG_PAD_INDEX = 0
-SONG_UNK_INDEX = 1
+# SONG_UNK_INDEX = 1
 
 ### OTHER CONFIG
 POPULAR_SONGS_PERCENTAGE = 5 # top POPULAR_SONGS_PERCENTAGE% songs sorted on frequency, to make the list of popular songs   
@@ -106,7 +107,7 @@ POPULAR_SONGS_PERCENTAGE = 5 # top POPULAR_SONGS_PERCENTAGE% songs sorted on fre
 BATCH_NUM_START = 0
 
 START_EPOCH = 0
-END_EPOCH = 3                                                              # number of epochs for training the model
+END_EPOCH = 2                                                            # number of epochs for training the model
 
 METRICS_EVALUATION_AND_SAVE_MODEL_EVERY_N_BATCH = 25_000                 # metrics evaluation on the test-set and saving model's weights happens after every METRICS_EVALUATION_EVERY_N_BATCH batches
 SHOW_LOSS_EVERY_N_BATCH = 5_000                                          # training loss is printed after every SHOW_LOSS_EVERY_N_BATCH batches
@@ -114,7 +115,7 @@ WRITE_SUMMARY = True                                                    # whethe
 
 NUM_TEST_SAMPLES_QUANTITATIVE = 10_000                                   # number of testing examples to be used for evaluating all the metrics 
 
-NAME = f"exp15_withtimebuckets_rnn_7_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"
+NAME = f"exp20_withtimebuckets_rnn_7_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"
 
 SUMMARY_DIR = os.path.join("summary", "summary_"+NAME )
 METRICS_SUMMARY_DIR = os.path.join("metrics", "metrics_summary_"+ NAME)
