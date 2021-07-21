@@ -213,11 +213,11 @@ def get_top_k_recommendations(model, dataset, k=K):
     top_k_recommendations = []
     next_items = []
     recommendations_GT = []
-    
-    for chunk_idx, chunk in enumerate(pd.read_csv(TEST_DATA_PATH, chunksize=1, nrows=NUM_TEST_SAMPLES_QUANTITATIVE)):        
+    val_seq_used = 0
 
+    for chunk_idx, chunk in enumerate(pd.read_csv(VAL_DATA_PATH, chunksize=1)):#, nrows=NUM_TEST_SAMPLES_QUANTITATIVE)):       
         if not REDIRECT_STD_OUT_TO_TXT_FILE:
-            print(f"{str(chunk_idx).zfill(len(str(NUM_TEST_SAMPLES_QUANTITATIVE)))}/{NUM_TEST_SAMPLES_QUANTITATIVE}", end="\r" )
+            print(f"{str(val_seq_used).zfill(len(str(NUM_TEST_SAMPLES_QUANTITATIVE)))}/{NUM_TEST_SAMPLES_QUANTITATIVE}", end="\r" )
         
         chunk_array = np.squeeze(chunk.to_numpy())
         
@@ -225,6 +225,7 @@ def get_top_k_recommendations(model, dataset, k=K):
         test_seq_len = chunk_array[1]    
         
         song_id_array = chunk_array[2:2+MAX_TEST_SEQ_LEN][-test_seq_len:] # Removing padding
+        
         cut = len(song_id_array)//2
         
         time_bucket_id_array = chunk_array[2+MAX_TEST_SEQ_LEN:2+MAX_TEST_SEQ_LEN+MAX_TEST_SEQ_LEN][-test_seq_len:] # Removing padding
@@ -233,10 +234,14 @@ def get_top_k_recommendations(model, dataset, k=K):
         # TODO: HANDLE OOV    
         song_id_array = [song_id for song_id in song_id_array if song_id in dataset.idx2item.keys()]          
         if len(song_id_array) < 2: continue        
-    
+        if song_id_array[:cut][-1] == song_id_array[cut]: continue # otherwise it would affect the sps 
+        
+        val_seq_used += 1
+        
         song_emb_id_x_batch = np.expand_dims(song_id_array[:cut], axis=0)
         if USE_TIME_BUCKETS:
             time_bucket_emb_id_x_batch = np.expand_dims(time_bucket_id_array[:cut], axis=0)
+            time_bucket_emb_id_x_batch = time_bucket_emb_id_x_batch.astype(int)
         else:
             time_bucket_emb_id_x_batch=None
             
@@ -256,7 +261,9 @@ def get_top_k_recommendations(model, dataset, k=K):
 
         gt = song_id_array[cut:]
         recommendations_GT.append(gt)
-    
+        
+        if val_seq_used == NUM_TEST_SAMPLES_QUANTITATIVE: break
+
     return top_k_recommendations, next_items, recommendations_GT
 
 
@@ -352,7 +359,7 @@ def show_recommended_song_info(write_name, inp, dataset, recommendations, gt=Non
 if __name__ == "__main__":
     import os
     
-    dataset = wynk_songs_dataset(ALL_SONGS_INFO_PATH, TRAIN_SONGS_INFO_PATH, TRAIN_DATA_PATH, TEST_DATA_PATH)
+    dataset = wynk_songs_dataset(ALL_SONGS_INFO_PATH, TRAIN_SONGS_INFO_PATH, TRAIN_DATA_PATH, VAL_DATA_PATH)
     model = rnn_recommendation_system_model(dataset.NUM_ITEMS, EMB_DIM, LSTM_DIM)
 
     model_path = os.path.join('models', 'models_exp12_4_day_data_2021_01_14_124146_1024_64_20', 'model_05_149999')
