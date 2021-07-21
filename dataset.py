@@ -112,7 +112,7 @@ class wynk_sessions_dataset():
             # Make dictionaries
             self.item2idx = {}    
             self.item2idx[SONG_PAD_TOKEN] = SONG_PAD_INDEX
-            self.item2idx[SONG_UNK_TOKEN] = SONG_UNK_INDEX
+            # self.item2idx[SONG_UNK_TOKEN] = SONG_UNK_INDEX
             for _, row in song_info_df.iterrows():
                 self.item2idx[row["song_id"]] = row["song_embedding_id"]        
 
