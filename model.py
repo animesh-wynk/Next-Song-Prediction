@@ -53,7 +53,14 @@ class rnn_reco_model(tf.keras.Model):
                                                              name="time_bucket_embedding_layer")
         
         self.lstm   = tf.keras.layers.LSTM(LSTM_DIM, return_state=True, name="rnn_layer")    
-        self.dense = customLinear(in_units=LSTM_DIM, out_units=vocab_size)
+        LSTM_DIM_HALF = int(LSTM_DIM/2)
+        self.reduction_layer = tf.keras.layers.Dense(units=LSTM_DIM_HALF, 
+                                                     activation="relu", 
+                                                     name="activation_size_reduction_layer")
+        
+        
+        
+        self.dense = customLinear(in_units=LSTM_DIM_HALF, out_units=vocab_size)
         self.dense.build((LSTM_DIM, ))
           
     
@@ -70,13 +77,14 @@ class rnn_reco_model(tf.keras.Model):
             lstm_inp = tf.concat([lstm_inp, time_bucket_emb], axis = -1) # (bs, MAX_LEN, SONG_EMB_DIM+TIME_BUCKET_EMB_DIM)
             
         lstm, state_h, state_c = self.lstm(lstm_inp, mask=song_emb_mask, initial_state=initial_state)
+        reduction_layer_out = self.reduction_layer(lstm)
         
         if not training:
-            logits = self.dense(lstm)
+            logits = self.dense(reduction_layer_out)
             probs = tf.nn.softmax(logits, axis=-1)        
             return probs, state_h, state_c 
         else:
-            return lstm  
+            return reduction_layer_out  
 
 if __name__ == "__main__":
     from dataset import wynk_sessions_dataset

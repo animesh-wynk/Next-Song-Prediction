@@ -60,7 +60,7 @@ with strategy.scope():
                             biases=last_layer[1],
                             labels=tf.expand_dims(y_batch, -1),
                             inputs=lstm,
-                            num_sampled = 15,
+                            num_sampled = 5_000,
                             num_classes = dataset.vocab_size,
                             num_true = 1,
                             remove_accidental_hits=True,

@@ -87,7 +87,7 @@ BATCH_SIZE = BATCH_SIZE_PER_REPLICA * NUM_REPLICAS # GLOBAL_BATCH_SIZE
 
 
 ### MODEL ARCHITECTURE CONFIG
-LSTM_DIM = 1024                      # output size of the rnn layer
+LSTM_DIM = 2048#1024                      # output size of the rnn layer
 SONG_EMB_DIM = 64
 TIME_BUCKET_EMB_DIM = 8
 USER_EMB_DIM = 64
@@ -115,7 +115,7 @@ WRITE_SUMMARY = True                                                    # whethe
 
 NUM_TEST_SAMPLES_QUANTITATIVE = 10_000                                   # number of testing examples to be used for evaluating all the metrics 
 
-NAME = f"exp20_withtimebuckets_rnn_7_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"
+NAME = f"exp21_withtimebuckets_rnn_7_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"
 
 SUMMARY_DIR = os.path.join("summary", "summary_"+NAME )
 METRICS_SUMMARY_DIR = os.path.join("metrics", "metrics_summary_"+ NAME)
