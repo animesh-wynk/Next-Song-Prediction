@@ -51,6 +51,14 @@ with strategy.scope():
     optimizer = tf.keras.optimizers.Adam() 
 
     def compute_loss(model, y_batch, lstm):
+
+        
+
+#         print("y_batch: ", y_batch)
+        loss_mask = tf.math.logical_not(tf.math.equal(y_batch, 0))
+#         tf.print(loss_mask)
+#         print("loss_mask: ", loss_mask) # (bs*MAX_LEN, )
+
         last_layer = model.layers[-1].weights
         
         # Notice that per_example_loss will have an entry per GPU
@@ -60,7 +68,7 @@ with strategy.scope():
                             biases=last_layer[1],
                             labels=tf.expand_dims(y_batch, -1),
                             inputs=lstm,
-                            num_sampled = 15,
+                            num_sampled = 1_000,
                             num_classes = dataset.vocab_size,
                             num_true = 1,
                             remove_accidental_hits=True,
@@ -70,7 +78,25 @@ with strategy.scope():
         # per_example_loss seems to be arrays for loss per example, for all the replicas
         # so if we have 2 GPUs, and the batch_size_per_replica = 4,
         # then per_example_loss will have xxx arrays of losses with xxx scalars in each of them 
-        #tf.print('\nper_example_loss: ', per_example_loss)
+#         print('\nper_example_loss: ', per_example_loss)
+#         print(per_example_loss.shape)
+        
+        
+        loss_mask = tf.cast(loss_mask, dtype=per_example_loss.dtype)
+#         print("loss_mask: ", loss_mask)
+        per_example_loss *= loss_mask
+#         print("per_example_loss: ", per_example_loss)
+            
+#         per_example_loss = tf.reshape(per_example_loss, (BATCH_SIZE_PER_REPLICA, -1))
+#         print("per_example_loss: ", per_example_loss)
+#         per_example_loss = tf.reduce_sum(per_example_loss, axis=-1)
+        
+#         print("per_example_loss: ", per_example_loss)
+        
+#         q("ahaa")
+
+
+        
         return tf.nn.compute_average_loss(per_example_loss, global_batch_size=BATCH_SIZE) 
 
     
@@ -93,6 +119,17 @@ def train_step(inputs):
                      time_bucket_emb_inp=time_bucket_emb_id_x_batch,
                      training=True)
         
+#         print('---')
+#         print("lstm.shape: ", lstm.shape) # (bs, MAX_LEN, LSTM_DIM)
+        lstm = tf.reshape(lstm, (lstm.shape[0]*lstm.shape[1], -1))
+#         print("lstm.shape: ", lstm.shape) # (bs*MAX_LEN, LSTM_DIM)
+#         print("song_emb_id_y_batch.shape: ", song_emb_id_y_batch.shape) # (bs, MAX_LEN)
+        song_emb_id_y_batch = tf.reshape(song_emb_id_y_batch, (-1,))
+#         print("song_emb_id_y_batch.shape: ", song_emb_id_y_batch.shape) # (bs*MAX_LEN,)
+        
+    
+
+
         loss = compute_loss(model, song_emb_id_y_batch, lstm)   
         # loss seems to be the average loss for all the data points in a global batch   
         #tf.print('\nloss: ', loss)

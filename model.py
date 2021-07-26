@@ -55,23 +55,39 @@ class rnn_reco_model(tf.keras.Model):
                                                              mask_zero=True, 
                                                              name="time_bucket_embedding_layer")
         
-        if USE_ATTENTION:
-            self.lstm   = tf.keras.layers.LSTM(LSTM_DIM, 
-                                               return_state=True, 
-                                               return_sequences=True, 
-                                               name="rnn_layer")            
-            self.attention = tf.keras.layers.Dense(1, name="attention_layer")
-        else:
-            self.lstm   = tf.keras.layers.LSTM(LSTM_DIM, 
-                                               return_state=True, 
-                                               name="rnn_layer")    
+        self.bn1 = tf.keras.layers.BatchNormalization(name='batchnorm_inputs')
+        
+        self.lstm = tf.keras.layers.LSTM(LSTM_DIM, 
+                                         return_state=True,
+                                         return_sequences=True,
+                                         recurrent_initializer='glorot_normal',
+                                         name='lstm_layer'
+                                         )
             
-        self.dense = customLinear(in_units=LSTM_DIM, out_units=vocab_size, name=f"{self.name}/last_layer")
-        self.dense.build((LSTM_DIM, ))
+        self.bn2 = tf.keras.layers.BatchNormalization(name='batchnorm_lstm')
+                
+        self.attn = tf.keras.layers.Attention(use_scale=False, causal=True, name='attention')
+        
+        LSTM_DIM_HALF = int(LSTM_DIM/2)
+        self.reduction_layer = tf.keras.layers.Dense(units=LSTM_DIM_HALF, 
+                                                     activation="relu", 
+                                                     name="activation_size_reduction_layer")
+        
+        LSTM_DIM_QUARTER = int(LSTM_DIM_HALF/2)
+        self.reduction_layer2 = tf.keras.layers.Dense(units=LSTM_DIM_QUARTER, 
+                                                     activation="relu", 
+                                                     name="activation_size_reduction_layer2")
+        
+        self.dense = customLinear(in_units=LSTM_DIM_QUARTER, out_units=vocab_size, name=f"{self.name}/last_layer")
+        self.dense.build((LSTM_DIM_QUARTER, ))
           
     
     def call(self, song_emb_inp, time_bucket_emb_inp, initial_state=None, training=True):   
+#         print('\n-----')
+#         print("in call")
+#         print("song_emb_inp: ", song_emb_inp)
         song_emb = self.song_emb(song_emb_inp)                           # (bs, MAX_LEN, SONG_EMB_DIM)
+#         print("song_emb_inp.shape: ", song_emb_inp.shape)
         song_emb_mask = self.song_emb.compute_mask(song_emb_inp)         # (bs, MAX_LEN)
 
         lstm_inp = song_emb                                              # (bs, MAX_LEN, SONG_EMB_DIM)
@@ -81,27 +97,46 @@ class rnn_reco_model(tf.keras.Model):
             time_bucket_emb = self.time_bucket_emb(time_bucket_emb_inp)  # (bs, MAX_LEN, TIME_BUCKET_EMB_DIM)            
             lstm_inp = tf.concat([lstm_inp, time_bucket_emb], axis = -1) # (bs, MAX_LEN, SONG_EMB_DIM+TIME_BUCKET_EMB_DIM)
             
-        lstm, state_h, state_c = self.lstm(lstm_inp, mask=song_emb_mask, initial_state=initial_state) 
+#         print("lstm_inp.shape: ", lstm_inp.shape)
+        lstm_inp = self.bn1(lstm_inp)
+#         print("lstm_inp.shape: ", lstm_inp.shape)        
+        
+        lstm, state_h, state_c = self.lstm(lstm_inp, 
+                                           initial_state=initial_state)
+#         print("lstm.shape: ", lstm.shape)
+        
+        lstm = self.bn2(lstm)
+#         print("lstm.shape: ", lstm.shape)
+                
+        # Self attention so key=value in inputs
+        attn = self.attn(inputs=[lstm, lstm], 
+                        mask=[lstm_inp_mask, lstm_inp_mask])
+#         print("attn.shape: ", attn.shape) 
+        
+        reduction_layer_out = self.reduction_layer(attn)
+        
+        reduction_layer_out2 = self.reduction_layer2(reduction_layer_out)
+#         print("reduction_layer_out.shape: ", reduction_layer_out.shape)
+
+#         output = tf.keras.layers.Dense(1000, name='output')(attn)
+#         print("output.shape: ", output.shape)
+#         q("attn shape")
+
+        
+        # lstm, state_h, state_c = self.lstm(lstm_inp, mask=song_emb_mask, initial_state=initial_state) 
         # lstm.shape: (bs, MAX_LEN, LSTM_DIM) if USE_ATTENTION else (bs, LSTM_DIM)
         
-        if USE_ATTENTION:
-            attn_weights = self.attention(lstm) # (bs, MAX_LEN, 1)
-            attn_weights_squeezed = tf.squeeze(attn_weights, axis=-1) # (bs, MAX_LEN)
-            attn_weights_squeezed_masked = tf.math.multiply(attn_weights_squeezed, tf.cast(lstm_inp_mask, tf.float32)) # (bs, MAX_LEN)
-            attn_weights_softmaxed = tf.keras.layers.Softmax(axis=-1)(attn_weights_squeezed_masked) # (bs, MAX_LEN)
-            attn_weights_softmaxed_repeated = tf.keras.layers.RepeatVector(LSTM_DIM)(attn_weights_softmaxed) # (bs, LSTM_DIM, MAX_LEN)                     
-            attn_weights_softmaxed_repeated_permuted = tf.keras.layers.Permute([2,1])(attn_weights_softmaxed_repeated) # (bs, MAX_LEN, LSTM_DIM)           
-            # weighted_lstm = tf.keras.layers.Multiply()([lstm, attn_weights_softmaxed_repeated_permuted]) # (bs, MAX_LEN, LSTM_DIM) also works fine       
-            weighted_lstm = tf.math.multiply(lstm, attn_weights_softmaxed_repeated_permuted) # (bs, MAX_LEN, LSTM_DIM)            
-            weighted_sum_lstm = tf.math.reduce_sum(weighted_lstm, axis=1, keepdims=False) # (bs, LSTM_DIM)
-            lstm = weighted_sum_lstm
-        
+#         q()
         if not training:
-            logits = self.dense(lstm)
+            logits = self.dense(reduction_layer_out2)
+            logits = logits[:, -1, :]
+#             print("logits.shape: ", logits.shape)
             probs = tf.nn.softmax(logits, axis=-1)        
             return probs, state_h, state_c 
         else:
-            return lstm  
+            return reduction_layer_out2  
+
+
 
 if __name__ == "__main__":
     from dataset import wynk_sessions_dataset

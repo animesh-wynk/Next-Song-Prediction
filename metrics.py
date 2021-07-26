@@ -214,6 +214,7 @@ def get_top_k_recommendations(model, dataset, k=K):
     next_items = []
     recommendations_GT = []
     
+    val_seq_used = 0
     for chunk_idx, chunk in enumerate(pd.read_csv(TEST_DATA_PATH, chunksize=1, nrows=NUM_TEST_SAMPLES_QUANTITATIVE)):        
 
         if not REDIRECT_STD_OUT_TO_TXT_FILE:
@@ -233,19 +234,34 @@ def get_top_k_recommendations(model, dataset, k=K):
         # TODO: HANDLE OOV    
         song_id_array = [song_id for song_id in song_id_array if song_id in dataset.idx2item.keys()]          
         if len(song_id_array) < 2: continue        
+        if song_id_array[:cut][-1] == song_id_array[cut]: continue # otherwise it would affect the sps
     
+        val_seq_used += 1
+        
         song_emb_id_x_batch = np.expand_dims(song_id_array[:cut], axis=0)
         if USE_TIME_BUCKETS:
             time_bucket_emb_id_x_batch = np.expand_dims(time_bucket_id_array[:cut], axis=0)
         else:
             time_bucket_emb_id_x_batch=None
             
+#         print(song_emb_id_x_batch.dtype)
+#         print(time_bucket_emb_id_x_batch.dtype)
+        time_bucket_emb_id_x_batch = time_bucket_emb_id_x_batch.astype(int)
+#         print(time_bucket_emb_id_x_batch.dtype)
+#         q("hmmm")
+        
+#         print(cut, song_emb_id_x_batch.shape, time_bucket_emb_id_x_batch.shape)
+
+#         print(song_emb_id_x_batch)
+#         print(time_bucket_emb_id_x_batch)
         probs, _, _ = model(song_emb_inp=song_emb_id_x_batch,
                             time_bucket_emb_inp=time_bucket_emb_id_x_batch,
                             training=False)
-    
+            
         probs = probs.numpy()[0] # np array (vocab_size)
 
+#         print("probs.shape: ", probs.shape)
+        
         probs[song_id_array[:cut]] = 0        
         
         top_k = np.argsort(-probs)[:k]
@@ -256,6 +272,8 @@ def get_top_k_recommendations(model, dataset, k=K):
 
         gt = song_id_array[cut:]
         recommendations_GT.append(gt)
+        
+        if val_seq_used == NUM_TEST_SAMPLES_QUANTITATIVE: break
     
     return top_k_recommendations, next_items, recommendations_GT
 
