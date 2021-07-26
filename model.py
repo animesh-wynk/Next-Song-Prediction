@@ -61,7 +61,7 @@ class rnn_reco_model(tf.keras.Model):
         
         
         self.dense = customLinear(in_units=LSTM_DIM_HALF, out_units=vocab_size)
-        self.dense.build((LSTM_DIM, ))
+        self.dense.build((LSTM_DIM_HALF, ))
           
     
     

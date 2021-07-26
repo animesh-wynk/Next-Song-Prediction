@@ -21,7 +21,7 @@ def get_timestamp():
 REDIRECT_STD_OUT_TO_TXT_FILE = True
 USE_TIME_BUCKETS = False
 
-LR_DECAY_RATE = 0.50 # Set None if LR decay is not to be employed
+LR_DECAY_RATE = None #0.50 # Set None if LR decay is not to be employed
 LR_DECAY_EVERY_N_BATCH = 120_000
 
 # DATA
@@ -115,7 +115,7 @@ WRITE_SUMMARY = True                                                    # whethe
 
 NUM_TEST_SAMPLES_QUANTITATIVE = 10_000                                   # number of testing examples to be used for evaluating all the metrics 
 
-NAME = f"exp21_withtimebuckets_rnn_7_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"
+NAME = f"exp22_withtimebuckets_rnn_7_day_data_{get_timestamp()}_{LSTM_DIM}_{SONG_EMB_DIM}_{MAX_LEN}"
 
 SUMMARY_DIR = os.path.join("summary", "summary_"+NAME )
 METRICS_SUMMARY_DIR = os.path.join("metrics", "metrics_summary_"+ NAME)
